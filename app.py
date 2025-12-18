@@ -365,51 +365,60 @@ class PromptEnhanceApp:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": f"You are an expert Prompt Writer for Large Language Models."},
-                    {"role": "user", "content": f"""Your goal is to improve the prompt given below for {task} :
---------------------
+                    {"role": "system", "content": 
+f"""Act as an expert Prompt Engineer.
+You will be given an initial prompt.
+Reason step by step to improve it.
+Make sure you produce a ready-to-use prompt."""},
+                    {"role": "user", "content": 
+            
+f"""# Objective
+Your task is to enhance the quality and effectiveness of the prompt provided for the following task: `{task}`.
+---
 
-Prompt: {lazy_prompt}
+# Prompt to Improve
+`{lazy_prompt}`
 
---------------------
+---
 
-Here are several tips on writing great prompts:
+## Best Practices for Prompt Engineering
+- Start the prompt by stating that it is an expert in the subject.
+- Place all instructions at the very beginning, using clear dividers (e.g., ###) to separate instruction sections from the context.
+- Specify the desired context, outcome, length, format, or style with as much detail as can be supported by the source prompt, without adding extra information.
 
--------
 
-Start the prompt by stating that it is an expert in the subject.
+## Workflow
+1. Begin with a concise 3-7 bullet checklist summarizing the key conceptual steps you will take to improve the prompt, without delving into specific content.
+2. Generate the improved prompt, applying the best practices above.
+3. After generating the improved prompt, perform a 1-2 line validation to ensure the revised prompt follows all best practices and constraints. Revise if the validation fails before final output.
 
-Put instructions at the beginning of the prompt and use ### or to separate the instruction and context 
+---
 
-Be specific, descriptive and as detailed as possible about the desired context, outcome, length, format, style, etc 
+## Output Instructions
+- Output the improved prompt below.
+- Place curly braces around any variables or sections that need user input or customization.
+- Always start your answer with "Improved Prompt:" followed immediately by the improved prompt and no extra commentary.
 
----------
+---
 
-Here's an example of a great prompt:
+## Output Verbosity
+- For all responses, use at most 2 short paragraphs or, if using a bulleted format, no more than 6 concise bullets (1 line each).
+- Prioritize providing complete, actionable answers within this length cap.
+- If giving updates or supervision on your process, make these updates no longer than 1-2 sentences unless explicitly instructed otherwise.
 
-As a master YouTube content creator, develop an engaging script that revolves around the theme of "Exploring Ancient Ruins."
-
-Your script should encompass exciting discoveries, historical insights, and a sense of adventure.
-
-Include a mix of on-screen narration, engaging visuals, and possibly interactions with co-hosts or experts.
-
-The script should ideally result in a video of around 10-15 minutes, providing viewers with a captivating journey through the secrets of the past.
-
-Example:
-
-"Welcome back, fellow history enthusiasts, to our channel! Today, we embark on a thrilling expedition..."
-
------
-
-Now, improve the prompt.
-
-IMPROVED PROMPT:"""}
+"""}
                 ],
                 temperature=0.7
             )
             
             # Extract the response
             result = response.choices[0].message.content
+            
+            start_index = result.find("Improved Prompt:")
+            if start_index != -1:
+                result = result[start_index + len("Improved Prompt:"):].strip()
+            else:
+                result = result.strip()
             
             # Display the result
             self.output_text.config(state=tk.NORMAL)
