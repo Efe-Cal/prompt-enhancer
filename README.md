@@ -1,6 +1,6 @@
 # Prompt Enhance
 
-A simple desktop application for enhancing prompts using OpenAI API with custom base URL support.
+A simple web application (Streamlit) for enhancing prompts using OpenAI API with custom base URL support.
 
 ## Features
 
@@ -31,23 +31,23 @@ MODEL=gpt-5.1
 
 ## Usage
 
-Run the application:
+Run the web app:
 ```bash
-python app.py
+streamlit run app.py
 ```
 
-1. Enter a topic in the "Topic Input" field
-2. Write your prompt in the "Prompt Input" text area
-3. Click the ▶ button to send the request
-4. View the AI-generated response in the "Output" section
-5. Click "📋 Copy" to copy the output to your clipboard
+Open the URL shown in the terminal.
+
+LAN access:
+- This project includes Streamlit server settings in `.streamlit/config.toml` to bind on `0.0.0.0:8501`.
+- From another device on the same network, open `http://<your-computer-ip>:8501`.
 
 ## Requirements
 
 - Python 3.7+
-- tkinter (usually comes with Python)
 - openai>=1.0.0
 - python-dotenv>=1.0.0
+- streamlit
 
 ## Configuration
 
