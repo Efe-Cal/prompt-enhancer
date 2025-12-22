@@ -66,7 +66,7 @@ Your task is to enhance the quality and effectiveness of the prompt provided for
 ## Best Practices for Prompt Engineering
 - Start the prompt by stating that it is an expert in the subject.
 - Place all instructions at the very beginning, using clear dividers (e.g., ###) to separate instruction sections from the context.
-- Specify the desired context, outcome, length, format, or style with as much detail as can be supported by the source prompt, without adding extra information.
+- Specify the desired context, outcome, length, format, or style with as much detail as can be supported by the source prompt. That is, you can add general information that is relevant to the task but you cannot add specific information that is not present in the source prompt (e.g., in a essay write-up prompt, you can specify the style of writing but you cannot add specific facts that are not in the source prompt).
 
 
 ## Workflow
@@ -81,12 +81,6 @@ Your task is to enhance the quality and effectiveness of the prompt provided for
 - Place curly braces around sections that need user input.
 - Always start your answer with "Improved Prompt:" followed immediately by the improved prompt and no extra commentary.
 
----
-
-## Output Verbosity
-- For all responses, use at most 2 short paragraphs or, if using a bulleted format, no more than 6 concise bullets (1 line each).
-- Prioritize providing complete, actionable answers within this length cap.
-- If giving updates or supervision on your process, make these updates no longer than 1-2 sentences unless explicitly instructed otherwise.
 """
 
 
@@ -106,7 +100,7 @@ def enhance_prompt(task: str, lazy_prompt: str, model: str) -> str:
     if start_index != -1:
         result = result[start_index + len("Improved Prompt:"):].strip()
     
-    validation_index = result.find("Validation:")
+    validation_index = result.find("Validation")
     if validation_index != -1:
         result = result[:validation_index].strip()
         
