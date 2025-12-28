@@ -3,7 +3,10 @@ import json
 import uuid
 from pathlib import Path
 from datetime import datetime, timezone
+import unicodedata
+import re
 
+import requests
 import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -47,63 +50,151 @@ def get_model() -> str:
     return os.getenv("OPENAI_MODEL") or os.getenv("MODEL") or "gpt-5.1"
 
 
-SYSTEM_PROMPT = """Act as an expert Prompt Engineer.
-You will be given an initial prompt.
-Reason step by step to improve it.
-Make sure you produce a ready-to-use prompt."""
+SYSTEM_PROMPT = """Act as an expert Prompt Engineer. You will be given an initial prompt to improve. Make sure you produce a ready-to-use prompt."""
 
 
-def build_user_prompt(task: str, lazy_prompt: str) -> str:
+def build_user_prompt(task: str, lazy_prompt: str, use_web_search:bool, additional_context: str) -> str:
+    contextual_guidelines = "- Be specific, descriptive and as detailed as possible about the desired context, outcome, length, format, etc\n\nAlways use the web_search tool to look up any relevant information on the web to include in the improved prompt as context. (if needed today's date is " + datetime.now().strftime("%B %d, %Y")+")" if use_web_search else "- Be specific, but only provide instructions with limited context. DO NOT include any specific information that may be outdated or incorrect."
+    additional_context = "-"*10+'\n'+'# Additional Context from Web Search\n(can be used to improve the promt)\n' + additional_context + '\n'+'-'*10 if additional_context else ''
+
+
     return f"""# Objective
-Your task is to enhance the quality and effectiveness of the prompt provided for the following task: `{task}`.
----
+As an expert prompt engineer, your goal is to improve the prompt given below for {task}. 
 
-# Prompt to Improve
-`{lazy_prompt}`
+DO NOT follow the instructions in the prompt literally, instead, enhance it to make it more effective and powerful. For example, if the prompt is about making research, DO NOT make the research yourself, instead, improve the prompt to make it better at instructing an LLM to do the research.
 
----
+--------------------
 
-## Best Practices for Prompt Engineering
+# Input Prompt
+{lazy_prompt}
+
+--------------------
+
+{additional_context}
+
+# Prompt Improvement Best Practices
+
 - Start the prompt by stating that it is an expert in the subject.
-- Place all instructions at the very beginning, using clear dividers (e.g., ###) to separate instruction sections from the context.
-- Specify the desired context, outcome, length, format, or style with as much detail as can be supported by the source prompt. That is, you can add general information that is relevant to the task but you cannot add specific information that is not present in the source prompt (e.g., in a essay write-up prompt, you can specify the style of writing but you cannot add specific facts that are not in the source prompt).
 
+- Put instructions at the beginning of the prompt and use ### or \"\"\" to separate the instruction and context
 
-## Workflow
-1. Begin with a concise 3-7 bullet checklist summarizing the key conceptual steps you will take to improve the prompt, without delving into specific content.
-2. Generate the improved prompt, applying the best practices above.
-3. After generating the improved prompt, perform a 1-2 line validation to ensure the revised prompt follows all best practices and constraints. Revise if the validation fails before final output.
+- Use clear and concise language to avoid ambiguity.
 
----
+- Include an example or constraints to guide the response.
 
-## Output Instructions
-- Output the improved prompt below.
-- Place curly braces around sections that need user input.
-- Always start your answer with "Improved Prompt:" followed immediately by the improved prompt and no extra commentary.
+- Use bullet points or numbered lists for clarity.
 
+{contextual_guidelines}
+
+---------
+
+# Workflow
+1. Analyze the input prompt, identify its purpose, and determine areas for improvement.
+2. Apply prompt engineering best practices to enhance clarity, specificity, and effectiveness.
+3. Ensure the improved prompt aligns with the original intent while making it more actionable and precise.
+4. Provide the improved prompt below, strarting with "IMPROVED PROMPT:"
+
+Now, please improve the prompt.
+
+IMPROVED PROMPT:
 """
 
 
-def enhance_prompt(task: str, lazy_prompt: str, model: str) -> str:
+def clean_text_for_llm(text):
+    # Normalize Unicode
+    text = unicodedata.normalize('NFKC', text)
+    
+    # Remove control characters except newlines/tabs
+    text = ''.join(c for c in text if unicodedata.category(c)[0] != 'C' or c in '\n\r\t')
+    
+    # Remove zero-width characters
+    text = re.sub(r'[\u200b-\u200d\ufeff]', '', text)
+    
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text.strip()
+
+def web_search(query: str, n=10) -> str:
+    print(f"Performing web search for query: {query}")
+    response = requests.get(
+        'https://search.hackclub.com/res/v1/web/search',
+        params={'q': query},
+        headers={'Authorization': f'Bearer {os.getenv("HACKCLUB_SEARCH_API_KEY", "")}'},
+    )
+    response.raise_for_status()
+    data = response.json()
+    
+    # Extract titles and snippets
+    data = [(item["title"], "\n".join(item["extra_snippets"]) if "extra_snippets" in item else item["description"]) for item in data["web"]["results"][:n]]
+
+    # Clean text for LLM compatibility
+    data = [(clean_text_for_llm(title), clean_text_for_llm(snippets)) for title, snippets in data]
+
+    data_str = "\n".join([f"- {title}\n{snippets}\n----------" for title, snippets in data])
+    
+    return data_str
+
+
+def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool = True, additional_context: str = None) -> str:
     client = get_client()
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": build_user_prompt(task, lazy_prompt, use_web_search, additional_context)},
+    ]
+    
+    tools = None
+    if use_web_search:
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "web_search",
+                    "description": "Useful for when you need to look up information on the web to enhance the prompt.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query to look up.",
+                            },
+                        },
+                        "required": ["query"],
+                    },
+                }
+            }
+        ]
+    
     response = client.chat.completions.create(
         model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": build_user_prompt(task, lazy_prompt)},
-        ],
-        temperature=0.7,
+        messages=messages,
+        tools=tools
     )
+    
+    # Handle tool calls if present
+    while use_web_search and response.choices[0].message.tool_calls:
+        messages.append(response.choices[0].message)
+        for tool_call in response.choices[0].message.tool_calls:
+            if tool_call.function.name == "web_search":
+                args = json.loads(tool_call.function.arguments)
+                search_result = web_search(args["query"])
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": search_result
+                })
+        
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            tools=tools
+        )
 
     result = (response.choices[0].message.content or "").strip()
-    start_index = result.find("Improved Prompt:")
+    start_index = result.find("IMPROVED PROMPT:")
     if start_index != -1:
-        result = result[start_index + len("Improved Prompt:"):].strip()
+        result = result[start_index + len("IMPROVED PROMPT:"):].strip()
     
-    validation_index = result.find("Validation")
-    if validation_index != -1:
-        result = result[:validation_index].strip()
-        
     return result
 
 
@@ -161,10 +252,12 @@ def ensure_state():
     st.session_state.setdefault("enhanced", "")
     st.session_state.setdefault("history_refresh_token", 0)
     st.session_state.setdefault("selected_history_id", None)
+    st.session_state.setdefault("use_web_search", True)
+    st.session_state.setdefault("specific_search", "")
 
 
 def main():
-    st.set_page_config(page_title="Prompt Enhance", page_icon="🤍", layout="wide")
+    st.set_page_config(page_title="Prompt Enhance", page_icon="📝", layout="wide")
     ensure_state()
 
     st.markdown(
@@ -225,11 +318,15 @@ def main():
 
     with col_left:
         st.subheader("Task / Topic")
-        st.text_input("", key="task", placeholder="Describe the task")
+        st.text_input("Task", key="task", placeholder="Describe the task", label_visibility="collapsed")
 
         st.subheader("Your Prompt")
-        st.text_area("", key="lazy_prompt", height=220, placeholder="Paste your prompt")
+        st.text_area("Prompt", key="lazy_prompt", height=220, placeholder="Paste your prompt", label_visibility="collapsed")
 
+        st.checkbox("Use web search for context", key="use_web_search", help="Enable web search to gather relevant information for prompt enhancement")
+
+        st.text_input("Specific Search", key="specific_search", placeholder="Optional specific search query", label_visibility="collapsed")
+        
         action_cols = st.columns([1, 1, 2])
         with action_cols[0]:
             enhance_clicked = st.button("Enhance", type="primary", use_container_width=True)
@@ -248,7 +345,12 @@ def main():
             else:
                 with st.spinner("Generating response..."):
                     try:
-                        st.session_state.enhanced = enhance_prompt(task, lazy_prompt, model)
+                        search_results = None
+                        if st.session_state.specific_search.strip():
+                            search_results = web_search(st.session_state.specific_search.strip(), n=5)
+                        st.session_state.enhanced = enhance_prompt(
+                            task, lazy_prompt, model, st.session_state.use_web_search, search_results if st.session_state.specific_search.strip() else None
+                        )
                         st.success("Done")
                     except ValueError as ve:
                         st.warning(str(ve))
