@@ -1,0 +1,364 @@
+/* App Container - Three Column Layout */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5efe6;
+}
+
+/* Left Sidebar - History */
+.sidebar {
+  width: 280px;
+  padding: 24px;
+  background-color: #e6d9c5;
+  border-right: none;
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+.sidebar-subtitle {
+  font-size: 12px;
+  color: #888;
+  margin: 0 0 20px 0;
+}
+
+.refresh-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background-color: transparent;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  margin-bottom: 24px;
+}
+
+.refresh-btn:hover {
+  background-color: #e8e2d9;
+}
+
+.saved-entries-section {
+  margin-bottom: 20px;
+}
+
+.saved-entries-label {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.saved-entries-select {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  margin-bottom: 12px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+.load-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.load-btn {
+  padding: 8px 24px;
+  background-color: transparent;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.load-btn:hover {
+  background-color: #e8e2d9;
+}
+
+.saved-count {
+  font-size: 13px;
+  color: #666;
+}
+
+.details-section {
+  margin-top: 16px;
+}
+
+.details-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.details-arrow {
+  display: inline-block;
+  transition: transform 0.2s;
+  font-size: 16px;
+}
+
+.details-arrow.open {
+  transform: rotate(90deg);
+}
+
+.details-content {
+  padding: 12px 0 12px 20px;
+  font-size: 13px;
+  color: #666;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 40px 60px;
+  max-width: 700px;
+}
+
+.main-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #4a3728;
+  margin: 0 0 8px 0;
+}
+
+.main-subtitle {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 32px 0;
+}
+
+.form-section {
+  margin-bottom: 24px;
+}
+
+.form-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #e8dcc8;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.form-input::placeholder {
+  color: #888;
+}
+
+.form-input:focus {
+  outline: 2px solid #b8956c;
+  outline-offset: -2px;
+}
+
+.form-textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 12px 16px;
+  background-color: #e8dcc8;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.form-textarea::placeholder {
+  color: #888;
+}
+
+.form-textarea:focus {
+  outline: 2px solid #b8956c;
+  outline-offset: -2px;
+}
+
+.web-search-section {
+  margin-bottom: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #b8956c;
+  cursor: pointer;
+}
+
+.info-icon {
+  font-size: 14px;
+  color: #888;
+  cursor: help;
+}
+
+.search-query-section {
+  margin-bottom: 20px;
+}
+
+.actions-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.enhance-btn {
+  padding: 12px 32px;
+  background-color: #c49a6c;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.enhance-btn:hover {
+  background-color: #b08858;
+}
+
+.save-btn {
+  padding: 12px 32px;
+  background-color: transparent;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save-btn:hover {
+  background-color: #e8e2d9;
+}
+
+.model-indicator {
+  font-size: 13px;
+  color: #888;
+  margin-left: 8px;
+}
+
+/* Right Panel - Enhanced Prompt */
+.enhanced-panel {
+  max-width:40%;
+  padding: 40px 24px;
+  flex-shrink: 0;
+}
+
+.enhanced-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+}
+
+.enhanced-output {
+  padding: 16px 20px;
+  background-color: #e8dcc8;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #333;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  line-height: 1.5;
+  overflow-x: auto;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-height: 40px;
+  max-height: 600px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 111, 78, 0.3) transparent;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+.enhanced-output::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.enhanced-output::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.enhanced-output::-webkit-scrollbar-thumb {
+  background-color: rgba(139, 111, 78, 0.3);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.enhanced-output::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(139, 111, 78, 0.5);
+}
+
+/* Hide scrollbar when not hovering (for webkit browsers) */
+.enhanced-output:not(:hover)::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+
+/* Loading Spinner */
+.spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(139, 111, 78, 0.2);
+  border-top-color: #8b6f4e;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,2 +1,14 @@
 .env
-*.json
+__pycache__/
+*.pyc
+.vscode/
+node_modules/
+dist/
+build/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.DS_Store
+venv/
+*.sqlite3

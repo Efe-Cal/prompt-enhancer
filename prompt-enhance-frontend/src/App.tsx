@@ -1,0 +1,224 @@
+import { useEffect, useState } from 'react'
+import './App.css'
+
+const API_BASE_URL = 'http://localhost:8000'
+
+interface SavedEntry {
+  id: number
+  task: string
+  lazy_prompt: string
+  enhanced_prompt: string
+  created_at: string
+}
+
+function App() {
+  const [task, setTask] = useState('')
+  const [prompt, setPrompt] = useState('')
+  const [enhancedPrompt, setEnhancedPrompt] = useState('')
+  const [useWebSearch, setUseWebSearch] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedEntry, setSelectedEntry] = useState('')
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [savedEntries, setSavedEntries] = useState<SavedEntry[]>()
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => { 
+    handleRefresh()
+  }, [])
+
+  const handleEnhance = () => {
+    setIsLoading(true)
+    setEnhancedPrompt('')
+    fetch(`${API_BASE_URL}/api/enhance/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        task,
+        lazy_prompt: prompt,
+        use_web_search: useWebSearch,
+        additional_context_query: searchQuery,
+      }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        setEnhancedPrompt(data.enhancedPrompt)
+      })
+      .catch(error => {
+        console.error('Error enhancing prompt:', error)
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
+  }
+
+  const handleSave = () => {
+    fetch(`${API_BASE_URL}/api/save/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        task,
+        lazy_prompt: prompt,
+        enhanced_prompt: enhancedPrompt,
+      }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Entry saved:', data)
+      })
+      .catch(error => {
+        console.error('Error saving entry:', error)
+      }
+    )
+  }
+
+  const handleLoad = () => {
+    const entry = savedEntries?.find(e => e.id === Number(selectedEntry))
+    if (entry) {
+      setTask(entry.task)
+      setPrompt(entry.lazy_prompt)
+      setEnhancedPrompt(entry.enhanced_prompt)
+    }
+  }
+
+  const handleRefresh = () => {
+    fetch(`${API_BASE_URL}/api/prompts/`)
+      .then(response => response.json())
+      .then(data => {
+        setSavedEntries(data.prompts)
+        console.log('Fetched prompts:', data)
+      })
+      .catch(error => {
+        console.error('Error fetching prompts:', error)
+      })
+
+  }
+
+  return (
+    <div className="app-container">
+      {/* Left Sidebar - History */}
+      <aside className="sidebar">
+        <h2 className="sidebar-title">History</h2>        
+        <button className="refresh-btn" onClick={handleRefresh}>
+          Refresh
+        </button>
+
+        <div className="saved-entries-section">
+          <label className="saved-entries-label">Saved entries</label>
+          <select 
+            className="saved-entries-select"
+            value={selectedEntry}
+            onChange={(e) => setSelectedEntry(e.target.value)}
+          >
+            {savedEntries?.map(entry => (
+              <option key={entry.id} value={entry.id}>
+                {entry.task || 'Untitled'} ({entry.created_at})
+              </option>
+            ))}
+          </select>
+
+          <div className="load-section">
+            <button className="load-btn" onClick={handleLoad}>
+              Load
+            </button>
+            <span className="saved-count">{savedEntries?.length} saved</span>
+          </div>
+        </div>
+
+        <div className="details-section">
+          <button 
+            className="details-toggle"
+            onClick={() => setDetailsOpen(!detailsOpen)}
+          >
+            <span className={`details-arrow ${detailsOpen ? 'open' : ''}`}>›</span>
+            Details
+          </button>
+          {detailsOpen && (
+            <div className="details-content">
+              {/* Details content would go here */}
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="main-content">
+        <h1 className="main-title">Prompt Enhance</h1>
+        <p className="main-subtitle">Transform your ideas into powerful prompts</p>
+
+        <div className="form-section">
+          <label className="form-label">Task / Topic</label>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Describe the task"
+            value={task}
+            onChange={(e) => setTask(e.target.value)}
+          />
+        </div>
+
+        <div className="form-section">
+          <label className="form-label">Your Prompt</label>
+          <textarea
+            className="form-textarea"
+            placeholder="Paste your prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
+        </div>
+
+        <div className="web-search-section">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={useWebSearch}
+              onChange={(e) => setUseWebSearch(e.target.checked)}
+            />
+            <span>Use web search for context</span>
+            <span className="info-icon" title="Enable web search to gather additional context">ⓘ</span>
+          </label>
+        </div>
+
+        <div className="search-query-section">
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Optional specific search query"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="actions-section">
+          <button className="enhance-btn" onClick={handleEnhance}>
+            Enhance
+          </button>
+          <button className="save-btn" onClick={handleSave}>
+            Save
+          </button>
+          <span className="model-indicator">Model: gemini-3-flash-preview</span>
+        </div>
+      </main>
+
+      {/* Right Panel - Enhanced Prompt */}
+      <aside className="enhanced-panel">
+        <h2 className="enhanced-title">Enhanced Prompt</h2>
+        <pre className="enhanced-output">
+          {isLoading ? (
+            <div className="spinner-container">
+              <div className="spinner"></div>
+              <span>Enhancing your prompt...</span>
+            </div>
+          ) : (
+            <code>{enhancedPrompt || 'Your enhanced prompt will appear here.'}</code>
+          )}
+        </pre>
+      </aside>
+    </div>
+  )
+}
+
+export default App
