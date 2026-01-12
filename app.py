@@ -1,3 +1,5 @@
+# Deprecated
+
 import os
 import json
 import uuid
@@ -138,9 +140,12 @@ def web_search(query: str, n=10) -> str:
 
 def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool = True, additional_context: str = None) -> str:
     client = get_client()
+    additional_context = web_search(additional_context, 3) if additional_context else ""  
+    p = build_user_prompt(task, lazy_prompt, use_web_search, additional_context)
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": build_user_prompt(task, lazy_prompt, use_web_search, additional_context)},
+        {"role": "user", "content": p},
     ]
     
     tools = None
