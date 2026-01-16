@@ -21,6 +21,9 @@ function App() {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [savedEntries, setSavedEntries] = useState<SavedEntry[]>()
   const [isLoading, setIsLoading] = useState(false)
+  const [ws, setWs] = useState<WebSocket | null>(null)
+  const [userQuestion, setUserQuestion] = useState<string | null>(null)
+  const [userAnswer, setUserAnswer] = useState('')
 
   useEffect(() => { 
     handleRefresh()
@@ -29,28 +32,85 @@ function App() {
   const handleEnhance = () => {
     setIsLoading(true)
     setEnhancedPrompt('')
-    fetch(`${API_BASE_URL}/api/enhance/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        task,
-        lazy_prompt: prompt,
-        use_web_search: useWebSearch,
-        additional_context_query: searchQuery,
-      }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        setEnhancedPrompt(data.enhancedPrompt)
+    setUserQuestion(null)
+    
+    // Generate task ID on client side
+    const taskId = crypto.randomUUID()
+        
+    // Connect to WebSocket FIRST
+    const websocket = new WebSocket(`ws://localhost:8000/ws/enhance/${taskId}/`)
+    
+    websocket.onopen = () => {
+      console.log('WebSocket connected')
+      
+      // Only start the task AFTER WebSocket is connected
+      fetch(`${API_BASE_URL}/api/enhance/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          task_id: taskId,  // Send our pre-generated task ID
+          task,
+          lazy_prompt: prompt,
+          use_web_search: useWebSearch,
+          additional_context_query: searchQuery,
+        }),
       })
-      .catch(error => {
-        console.error('Error enhancing prompt:', error)
-      })
-      .finally(() => {
+        .then(response => response.json())
+        .then(data => {
+          console.log('Task started:', data)
+        })
+        .catch(error => {
+          console.error('Error enhancing prompt:', error)
+          setIsLoading(false)
+          websocket.close()
+        })
+    }
+    
+    websocket.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      
+      if (data.type === 'user_question') {
+        // Show dialog with user question
+        setUserQuestion(data.question)
+      } else if (data.type === 'task_complete') {
+        // Task finished, display result
+        setEnhancedPrompt(data.result)
         setIsLoading(false)
-      })
+        websocket.close()
+      } else if (data.type === 'task_error') {
+        console.error('Task error:', data.error)
+        alert(`Error: ${data.error}`)
+        setIsLoading(false)
+        websocket.close()
+      } else if (data.type === 'answer_received') {
+        // User answer was received
+        setUserQuestion(null)
+        setUserAnswer('')
+      }
+    }
+    
+    websocket.onerror = (error) => {
+      console.error('WebSocket error:', error)
+      setIsLoading(false)
+    }
+    
+    websocket.onclose = () => {
+      console.log('WebSocket disconnected')
+      setWs(null)
+    }
+    
+    setWs(websocket)
+  }
+
+  const handleAnswerSubmit = () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'user_answer',
+        answer: userAnswer
+      }))
+    }
   }
 
   const handleSave = () => {
@@ -99,6 +159,35 @@ function App() {
 
   return (
     <div className="app-container">
+      {/* User Question Dialog */}
+      {userQuestion && (
+        <div className="dialog-overlay">
+          <div className="dialog-box">
+            <h3>Question from AI</h3>
+            <p>{userQuestion}</p>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Your answer..."
+              value={userAnswer}
+              onChange={(e) => setUserAnswer(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAnswerSubmit()}
+            />
+            <div className="dialog-actions">
+              <button className="dialog-btn primary" onClick={handleAnswerSubmit}>
+                Submit
+              </button>
+              <button 
+                className="dialog-btn secondary" 
+                onClick={() => setUserQuestion(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Left Sidebar - History */}
       <aside className="sidebar">
         <h2 className="sidebar-title">History</h2>        

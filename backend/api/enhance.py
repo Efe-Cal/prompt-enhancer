@@ -5,6 +5,7 @@ from datetime import datetime
 import unicodedata
 import re
 
+import openai
 import requests
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -29,7 +30,7 @@ SYSTEM_PROMPT = """Act as an expert Prompt Engineer. You will be given an initia
 def build_user_prompt(task: str, lazy_prompt: str, use_web_search:bool, additional_context: str) -> str:
     contextual_guidelines = "- Be specific, descriptive and as detailed as possible about the desired context, outcome, length, format, etc\n\nAlways use the web_search tool to look up any relevant information on the web to include in the improved prompt as context. (if needed today's date is " + datetime.now().strftime("%B %d, %Y")+")" if use_web_search else "- Be specific, but only provide instructions with limited context. DO NOT include any specific information that may be outdated or incorrect."
     additional_context = "\n###\n"+'# Additional Context from Web Search\n(can be used to improve the promt)\n' + additional_context + '\n###\n'if additional_context else ''
-
+    contextual_guidelines += "\n\n- Expect the prompt to be ambiguous, ask clarifying questions with get_user_input tool to better understand the user's intent and the specific context before improving the prompt."
 
     return f"""# Objective
 As an expert prompt engineer, your goal is to improve the prompt given below for {task}. 
@@ -107,8 +108,11 @@ def web_search(query: str, n=10) -> str:
     return data_str
 
 
-def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool = True, additional_context_query: str = None) -> str:
-    client = get_client()
+def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool = True, additional_context_query: str = None, falling_back=False, task_id: str = None) -> str:
+    if not falling_back:
+        client = get_client()
+    else:
+        client = OpenAI(api_key=os.getenv("FALLBACK_API_KEY", ""))
 
     additional_context = web_search(additional_context_query, 3) if additional_context_query else ""  
     p = build_user_prompt(task, lazy_prompt, use_web_search, additional_context)
@@ -118,9 +122,27 @@ def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool
         {"role": "user", "content": p},
     ]
     
-    tools = None
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_user_input",
+                "description": "Ask the user for input to clarify or enhance the prompt.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "question": {
+                            "type": "string",
+                            "description": "The question to ask the user",
+                        },
+                    },
+                    "required": ["question"],
+                },
+            }
+        }
+    ]
     if use_web_search:
-        tools = [
+        tools += [
             {
                 "type": "function",
                 "function": {
@@ -140,34 +162,57 @@ def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool
             }
         ]
     
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        tools=tools
-    )
     
-    # Handle tool calls if present
-    while use_web_search and response.choices[0].message.tool_calls:
-        messages.append(response.choices[0].message)
-        for tool_call in response.choices[0].message.tool_calls:
-            if tool_call.function.name == "web_search":
-                args = json.loads(tool_call.function.arguments)
-                search_result = web_search(args["query"])
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": search_result
-                })
-        
+    
+    try:
         response = client.chat.completions.create(
             model=model,
             messages=messages,
             tools=tools
         )
+        
+        # Handle tool calls if present
+        while response.choices[0].message.tool_calls:
+            messages.append(response.choices[0].message)
+            for tool_call in response.choices[0].message.tool_calls:
+                if tool_call.function.name == "web_search":
+                    args = json.loads(tool_call.function.arguments)
+                    search_result = web_search(args["query"])
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": search_result
+                    })
+                if tool_call.function.name == "get_user_input":
+                    # Local import to avoid circular dependency
+                    from .tasks import ask_user_question
+                    
+                    args = json.loads(tool_call.function.arguments)
+                    print("Asking user question via WebSocket...")
+                    user_input = ask_user_question(
+                        task_id=task_id,
+                        question=args["question"]
+                    )
+                    
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": user_input
+                    })
+            
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=tools
+            )
 
-    result = (response.choices[0].message.content or "").strip()
-    start_index = result.find("IMPROVED PROMPT:")
-    if start_index != -1:
-        result = result[start_index + len("IMPROVED PROMPT:"):].strip()
-    
-    return result
+        result = (response.choices[0].message.content or "").strip()
+        start_index = result.find("IMPROVED PROMPT:")
+        if start_index != -1:
+            result = result[start_index + len("IMPROVED PROMPT:"):].strip()
+        
+        return result
+    except openai.APIStatusError as e:
+        print(f"APIStatusError: {e}")
+        print("Falling back to alternative model...")
+        return enhance_prompt(task, lazy_prompt, "gpt-5.1", use_web_search, additional_context_query, falling_back=True)
