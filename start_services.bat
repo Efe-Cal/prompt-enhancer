@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion
 echo ============================================
 echo Starting PromptEnhance Services
 echo ============================================
@@ -6,23 +7,39 @@ echo.
 
 REM Ensure Redis is running (Docker)
 echo [1/3] Checking Redis...
-redis-cli ping >nul 2>&1
-if %errorlevel% neq 0 (
+netstat -an | findstr ":6379" >nul 2>&1
+if !errorlevel! neq 0 (
     echo   X Redis is not running. Starting with Docker...
-    docker ps --filter "name=promptenhance-redis" --format "{{.ID}}" | findstr /r "." >nul 2>&1
-    if %errorlevel% neq 0 (
-        docker run -d --name promptenhance-redis -p 6379:6379 redis >nul 2>&1
+    
+    REM Check if Docker is running
+    docker info >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo   X Docker is not running. Please start Docker Desktop first.
+        pause
+        exit /b 1
+    )
+    
+    REM Check if container exists using docker container inspect
+    docker container inspect promptenhance-redis >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo   - Creating new Redis container...
+        docker run -d --name promptenhance-redis -p 6379:6379 redis:latest
+        if !errorlevel! neq 0 (
+            echo   X Failed to create Redis container.
+            pause
+            exit /b 1
+        )
     ) else (
+        echo   - Starting existing Redis container...
         docker start promptenhance-redis >nul 2>&1
-        if %errorlevel% neq 0 (
+        if !errorlevel! neq 0 (
             echo   X Failed to start existing Redis container.
-            echo   Please ensure Docker Desktop is running.
-            echo.
             pause
             exit /b 1
         )
     )
-
+    echo   - Waiting for Redis to start...
+    timeout /t 3 /nobreak >nul
 ) else (
     echo   - Redis is running
 )
@@ -44,5 +61,7 @@ echo.
 echo Celery Worker: Running in separate window
 echo Django Server: Running on http://localhost:8000
 echo.
+timeout /t 2
+start "" http://localhost:8000
 echo Press any key to close this window...
 pause >nul
