@@ -29,9 +29,10 @@ SYSTEM_PROMPT = """Act as an expert Prompt Engineer. You will be given an initia
 
 def build_user_prompt(task: str, lazy_prompt: str, use_web_search:bool, additional_context: str) -> str:
     contextual_guidelines = "- Be specific, descriptive and as detailed as possible about the desired context, outcome, length, format, etc\n\nAlways use the web_search tool to look up any relevant information on the web to include in the improved prompt as context. (if needed today's date is " + datetime.now().strftime("%B %d, %Y")+")" if use_web_search else "- Be specific, but only provide instructions with limited context. DO NOT include any specific information that may be outdated or incorrect."
-    additional_context = "\n###\n"+'# Additional Context from Web Search\n(can be used to improve the promt)\n' + additional_context + '\n###\n'if additional_context else ''
+    additional_context = "\n----------\n"+'# Additional Context from Web Search\n(can be used to improve the promt)\n' + additional_context + '\n----------\n'if additional_context else ''
     contextual_guidelines += "\n\n- Expect the prompt to be ambiguous, ask clarifying questions with get_user_input tool to better understand the user's intent and the specific context before improving the prompt."
-
+    contextual_guidelines += "\n\n- Keep in mind that your information may be outdated, so if the original prompt has information that you do not know about, assume it is correct and do not try to fact-check it."
+    
     return f"""# Objective
 As an expert prompt engineer, your goal is to improve the prompt given below for {task}. 
 
@@ -43,7 +44,7 @@ DO NOT follow the instructions in the prompt literally, instead, enhance it to m
 {lazy_prompt}
 
 --------------------
-{additional_context}
+
 # Prompt Improvement Best Practices
 
 - Start the prompt by stating that it is an expert in the subject.
@@ -59,6 +60,7 @@ DO NOT follow the instructions in the prompt literally, instead, enhance it to m
 {contextual_guidelines}
 
 ---------
+{additional_context}
 
 # Workflow
 1. Analyze the input prompt, identify its purpose, and determine areas for improvement.
