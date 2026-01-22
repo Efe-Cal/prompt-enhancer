@@ -6,7 +6,7 @@ echo ============================================
 echo.
 
 REM Ensure Redis is running (Docker)
-echo [1/3] Checking Redis...
+echo [1/2] Checking Redis...
 netstat -an | findstr ":6379" >nul 2>&1
 if !errorlevel! neq 0 (
     echo   X Redis is not running. Starting with Docker...
@@ -45,12 +45,7 @@ if !errorlevel! neq 0 (
 )
 
 echo.
-echo [2/3] Starting Celery worker...
-start "Celery Worker" cmd /k "cd backend && ..\venv\Scripts\activate && celery -A backend worker --loglevel=info --pool=solo"
-
-echo.
-echo [3/3] Starting Django with Daphne...
-timeout /t 3 /nobreak >nul
+echo [2/2] Starting Django with Daphne...
 start "Django Server" cmd /k "cd backend && ..\venv\Scripts\activate && daphne -b 0.0.0.0 -p 8000 backend.asgi:application"
 
 echo.
@@ -58,7 +53,6 @@ echo ============================================
 echo Services Started!
 echo ============================================
 echo.
-echo Celery Worker: Running in separate window
 echo Django Server: Running on http://localhost:8000
 echo.
 timeout /t 2

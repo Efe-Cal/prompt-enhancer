@@ -4,14 +4,17 @@ from dotenv import load_dotenv
 
 from rest_framework.generics import GenericAPIView, CreateAPIView
 from .models import SavedPrompt
-from .enhance import enhance_prompt
 from .serializers import EnhancePromptRequestSerializer, SavePromptSerializer
 from rest_framework.response import Response
-from .tasks import enhance_prompt_task
 
 load_dotenv()
 
+
 class EnhancePromptView(GenericAPIView):
+    """
+    Returns a task_id for the client to connect via WebSocket.
+    The actual enhancement is triggered by sending an 'enhance' message through the WebSocket.
+    """
     serializer_class = EnhancePromptRequestSerializer
     
     def post(self, request):
@@ -20,29 +23,15 @@ class EnhancePromptView(GenericAPIView):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         
-        task = serializer.validated_data['task']
-        lazy_prompt = serializer.validated_data['lazy_prompt']
-        use_web_search = serializer.validated_data.get('use_web_search', False)
-        additional_context_query = serializer.validated_data.get('additional_context_query', "")
-        
         # Use client-provided task_id or generate one
         task_id = data.get('task_id') or str(uuid.uuid4())
-        
-        # Start Celery task asynchronously
-        enhance_prompt_task.delay(
-            task_id=task_id,
-            task=task,
-            lazy_prompt=lazy_prompt,
-            use_web_search=use_web_search,
-            additional_context_query=additional_context_query,
-            model=os.getenv("MODEL", "gpt-5.1")
-        )
 
         return Response({
             'task_id': task_id,
-            'status': 'processing',
-            'message': 'Task started. Connect to WebSocket for real-time updates.'
+            'status': 'ready',
+            'message': 'Connect to WebSocket and send enhance message to start processing.'
         })
+
 
 class SavePromptView(CreateAPIView):
     serializer_class = SavePromptSerializer
@@ -63,6 +52,7 @@ class SavePromptView(CreateAPIView):
         )
             
         return Response({'status': 'Prompt saved successfully'})
+
     
 class ListSavedPromptsView(GenericAPIView):
     def get(self, request):

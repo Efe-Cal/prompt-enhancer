@@ -43,39 +43,29 @@ function App() {
     websocket.onopen = () => {
       console.log('WebSocket connected')
       
-      // Only start the task AFTER WebSocket is connected
-      fetch(`${API_BASE_URL}/api/enhance/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          task_id: taskId,  // Send our pre-generated task ID
-          task,
-          lazy_prompt: prompt,
-          use_web_search: useWebSearch,
-          additional_context_query: searchQuery,
-        }),
-      })
-        .then(response => response.json())
-        .then(data => {
-          console.log('Task started:', data)
-        })
-        .catch(error => {
-          console.error('Error enhancing prompt:', error)
-          setIsLoading(false)
-          websocket.close()
-        })
+      // Send enhance request directly through WebSocket
+      websocket.send(JSON.stringify({
+        type: 'enhance',
+        task,
+        lazy_prompt: prompt,
+        use_web_search: useWebSearch,
+        additional_context_query: searchQuery,
+      }))
+      console.log('Enhance request sent via WebSocket')
     }
     
     websocket.onmessage = (event) => {
+      console.log('WebSocket message received:', event.data)
       const data = JSON.parse(event.data)
       
-      if (data.type === 'user_question') {
+      if (data.type === 'processing') {
+        console.log('Enhancement processing started')
+      } else if (data.type === 'user_question') {
         // Show dialog with user question
         setUserQuestion(data.question)
       } else if (data.type === 'task_complete') {
         // Task finished, display result
+        console.log('Task complete, result length:', data.result?.length)
         setEnhancedPrompt(data.result)
         setIsLoading(false)
         websocket.close()
