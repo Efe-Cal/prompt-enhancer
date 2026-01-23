@@ -152,14 +152,17 @@ def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool
             messages=messages,
             tools=tools
         )
+        print(f"[DEBUG] Initial LLM Response: {response.choices[0].message}")
         
         # Handle tool calls if present
         while response.choices[0].message.tool_calls:
             messages.append(response.choices[0].message)
             for tool_call in response.choices[0].message.tool_calls:
+                print(f"[DEBUG] Processing Tool Call: {tool_call.function.name} with args: {tool_call.function.arguments}")
                 if tool_call.function.name == "web_search":
                     args = json.loads(tool_call.function.arguments)
                     search_result = web_search(args["query"])
+                    print(f"[DEBUG] Tool Result ({tool_call.function.name}): {search_result[:100]}...")
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
@@ -175,6 +178,7 @@ def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool
                         task_id=task_id,
                         question=args["question"]
                     )
+                    print(f"[DEBUG] Tool Result ({tool_call.function.name}): {user_input}")
                     
                     messages.append({
                         "role": "tool",
@@ -187,6 +191,7 @@ def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool
                 messages=messages,
                 tools=tools
             )
+            print(f"[DEBUG] Next LLM Response: {response.choices[0].message}")
 
         result = (response.choices[0].message.content or "").strip()
         start_index = result.find("IMPROVED PROMPT:")
@@ -273,13 +278,16 @@ async def enhance_prompt_async(
             messages=messages,
             tools=tools
         )
+        print(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")
         
         while response.choices[0].message.tool_calls:
             messages.append(response.choices[0].message)
             for tool_call in response.choices[0].message.tool_calls:
+                print(f"[DEBUG] Processing Tool Call (Async): {tool_call.function.name} with args: {tool_call.function.arguments}")
                 if tool_call.function.name == "web_search":
                     args = json.loads(tool_call.function.arguments)
                     search_result = await web_search_async(args["query"])
+                    print(f"[DEBUG] Tool Result ({tool_call.function.name}): {search_result[:100]}...")
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
@@ -293,6 +301,8 @@ async def enhance_prompt_async(
                     else:
                         user_input = "(No user input handler available)"
                     
+                    print(f"[DEBUG] Tool Result ({tool_call.function.name}): {user_input}")
+
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
@@ -304,6 +314,7 @@ async def enhance_prompt_async(
                 messages=messages,
                 tools=tools
             )
+            print(f"[DEBUG] Next LLM Response (Async): {response.choices[0].message}")
 
         result = (response.choices[0].message.content or "").strip()
         start_index = result.find("IMPROVED PROMPT:")
