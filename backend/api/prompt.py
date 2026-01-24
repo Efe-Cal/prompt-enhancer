@@ -69,11 +69,12 @@ Apply the following framework to every improvement:
 # Tool Use Examples
 {web_example}
 - get_user_input
-    User prompt: "Create a marketing plan for my new product."
-    Tool call:
-        - get_user_input with question "What is the target audience for your new product?"
-        - get_user_input with question "What is the timeline for the marketing plan?"
-        - get_user_input with question "Are there any specific channels or platforms you want to focus on?"
+    User prompt: "Create a marketing plan."
+    Model Action: [Calls get_user_input(questions=[
+        "Who is the target audience?", 
+        "What are the specific channels (LinkedIn, Twitter, Email)?", 
+        "What is the budget constraint?"
+    ])]
 
 # Output Format (CRITICAL)
 1. **TOOL USE PRIORITY:** If you are unsure of the user's intent or need facts, **Call the tool immediately**. Do NOT generate the Analysis/Prompt text yet.

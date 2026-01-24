@@ -204,6 +204,11 @@ def enhance_prompt(task: str, lazy_prompt: str, model: str, use_web_search: bool
         print("Falling back to alternative model...")
         # return enhance_prompt(task, lazy_prompt, "gpt-5.1", use_web_search, additional_context_query, falling_back=True)
 
+def format_answers_for_llm(questions:list[str],answers: list[str]) -> str:
+    if len(answers) == 1:
+        return answers[0]
+    else:
+        return "\n".join([f"Q: {q}\nA: {answer}" for q, answer in zip(questions, answers)])
 
 async def enhance_prompt_async(
     task: str,
@@ -238,16 +243,17 @@ async def enhance_prompt_async(
             "type": "function",
             "function": {
                 "name": "get_user_input",
-                "description": "Ask the user for input to clarify or enhance the prompt.",
+                "description": "Ask the user for input to clarify the prompt.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "question": {
-                            "type": "string",
-                            "description": "The question to ask the user",
+                        "questions": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "The question(s) to ask the user",
                         },
                     },
-                    "required": ["question"],
+                    "required": ["questions"],
                 },
             }
         }
@@ -297,9 +303,11 @@ async def enhance_prompt_async(
                     args = json.loads(tool_call.function.arguments)
                     print("Asking user question via WebSocket...")
                     if ask_user_func:
-                        user_input = await ask_user_func(args["question"])
+                        user_input = await ask_user_func(args["questions"])
                     else:
                         user_input = "(No user input handler available)"
+                    
+                    user_input = format_answers_for_llm(args["questions"], user_input)
                     
                     print(f"[DEBUG] Tool Result ({tool_call.function.name}): {user_input}")
 
@@ -308,7 +316,7 @@ async def enhance_prompt_async(
                         "tool_call_id": tool_call.id,
                         "content": user_input
                     })
-            
+
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
