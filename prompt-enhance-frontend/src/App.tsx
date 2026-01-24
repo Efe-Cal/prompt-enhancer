@@ -22,8 +22,9 @@ function App() {
   const [savedEntries, setSavedEntries] = useState<SavedEntry[]>()
   const [isLoading, setIsLoading] = useState(false)
   const [ws, setWs] = useState<WebSocket | null>(null)
-  const [userQuestion, setUserQuestion] = useState<string | null>(null)
-  const [userAnswer, setUserAnswer] = useState('')
+  const [userQuestions, setUserQuestions] = useState<Array<string> | null>(null)
+  const [userAnswers, setUserAnswers] = useState<string[]>([])
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => { 
     handleRefresh()
@@ -32,7 +33,9 @@ function App() {
   const handleEnhance = () => {
     setIsLoading(true)
     setEnhancedPrompt('')
-    setUserQuestion(null)
+    setErrorMessage(null)
+    setUserQuestions(null)
+    setUserAnswers([])
     
     // Generate task ID on client side
     const taskId = crypto.randomUUID()
@@ -61,8 +64,9 @@ function App() {
       if (data.type === 'processing') {
         console.log('Enhancement processing started')
       } else if (data.type === 'user_question') {
-        // Show dialog with user question
-        setUserQuestion(data.question)
+        // Show dialog with user questions
+        setUserQuestions(data.questions)
+        setUserAnswers(new Array(data.questions.length).fill(''))
       } else if (data.type === 'task_complete') {
         // Task finished, display result
         console.log('Task complete, result length:', data.result?.length)
@@ -71,13 +75,13 @@ function App() {
         websocket.close()
       } else if (data.type === 'task_error') {
         console.error('Task error:', data.error)
-        alert(`Error: ${data.error}`)
+        setErrorMessage(data.error)
         setIsLoading(false)
         websocket.close()
       } else if (data.type === 'answer_received') {
-        // User answer was received
-        setUserQuestion(null)
-        setUserAnswer('')
+        // User answers were received
+        setUserQuestions(null)
+        setUserAnswers([])
       }
     }
     
@@ -98,9 +102,17 @@ function App() {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({
         type: 'user_answer',
-        answer: userAnswer
+        answers: userAnswers
       }))
     }
+  }
+
+  const handleAnswerChange = (index: number, value: string) => {
+    setUserAnswers(prev => {
+      const updated = [...prev]
+      updated[index] = value
+      return updated
+    })
   }
 
   const handleSave = () => {
@@ -150,26 +162,30 @@ function App() {
   return (
     <div className="app-container">
       {/* User Question Dialog */}
-      {userQuestion && (
+      {userQuestions && (
         <div className="dialog-overlay">
           <div className="dialog-box">
-            <h3>Question from AI</h3>
-            <p>{userQuestion}</p>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Your answer..."
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAnswerSubmit()}
-            />
+            <h3>Questions from AI</h3>
+            {userQuestions.map((q, index) => (
+              <div key={index} className="question-group">
+                <p className="dialog-question">{q}</p>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Your answer..."
+                  value={userAnswers[index] || ''}
+                  onChange={(e) => handleAnswerChange(index, e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && index === userQuestions.length - 1 && handleAnswerSubmit()}
+                />
+              </div>
+            ))}
             <div className="dialog-actions">
               <button className="dialog-btn primary" onClick={handleAnswerSubmit}>
                 Submit
               </button>
               <button 
                 className="dialog-btn secondary" 
-                onClick={() => setUserQuestion(null)}
+                onClick={() => setUserQuestions(null)}
               >
                 Cancel
               </button>
@@ -270,6 +286,12 @@ function App() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+
+        {errorMessage && (
+          <div className="error-message" style={{ color: 'red', marginTop: '10px', padding: '10px', border: '1px solid red', borderRadius: '4px', backgroundColor: '#ffe6e6' }}>
+            {errorMessage}
+          </div>
+        )}
 
         <div className="actions-section">
           <button className="enhance-btn" onClick={handleEnhance}>

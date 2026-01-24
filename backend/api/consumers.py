@@ -3,6 +3,9 @@ import asyncio
 import os
 import traceback
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.core.cache import cache
+from django.conf import settings
+from asgiref.sync import sync_to_async
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -48,7 +51,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             print(f"[WebSocket] Message type: {message_type}")
 
             if message_type == 'user_answer':
-                answer = text_data_json.get('answer')
+                answer = text_data_json.get('answers')
                 self.pending_answer = answer
                 self.answer_event.set()
                 
@@ -58,6 +61,18 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 }))
 
             elif message_type == 'enhance':
+                # Rate limit check
+                client_ip = self.scope.get('client', ['0.0.0.0'])[0]
+                is_allowed = await sync_to_async(self._check_rate_limit_sync)(client_ip)
+                
+                if not is_allowed:
+                    print(f"[WebSocket] Rate limit exceeded for IP: {client_ip}")
+                    await self.send(text_data=json.dumps({
+                        'type': 'task_error',
+                        'error': 'Rate limit exceeded. Please wait a minute before trying again.'
+                    }))
+                    return
+
                 print("[WebSocket] Starting enhancement...")
                 # Send acknowledgment first
                 await self.send(text_data=json.dumps({
@@ -123,30 +138,26 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 'error': str(e)
             }))
 
-    async def ask_user_question(self, question: str, timeout: int = 300) -> str:
+    async def ask_user_question(self, questions: str, timeout: int = 300) -> str:
         """Ask user a question and wait for answer via WebSocket."""
-        self.pending_answer = None
         self.answer_event.clear()
+        self.pending_answer = None
         
-        print(f"[WebSocket] Asking user question: {question}")
+        print(f"[WebSocket] Asking user question: {questions}")
         await self.send(text_data=json.dumps({
             'type': 'user_question',
-            'question': question
+            'questions': questions
         }))
         
         try:
             await asyncio.wait_for(self.answer_event.wait(), timeout=timeout)
-            print(f"[WebSocket] Got user answer: {self.pending_answer}")
-            return self.pending_answer or ""
+            answer = self.pending_answer
+            self.pending_answer = None
+            print(f"[WebSocket] Got user answer: {answer}")
+            return answer or ""
         except asyncio.TimeoutError:
             raise TimeoutError(f"User did not respond within {timeout} seconds")
 
-    async def user_question(self, event):
-        """Send user question to WebSocket (for group messages)."""
-        await self.send(text_data=json.dumps({
-            'type': 'user_question',
-            'question': event['question']
-        }))
 
     async def task_complete(self, event):
         """Send task completion to WebSocket (for group messages)."""
@@ -161,3 +172,20 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             'type': 'task_error',
             'error': event['error']
         }))
+
+    def _check_rate_limit_sync(self, ip_address):
+        """Check if IP has exceeded rate limit."""
+        cache_key = f"ws_enhance_limit_{ip_address}"
+        count = cache.get(cache_key, 0)
+        
+        limit = getattr(settings, 'WS_RATE_LIMIT', 5)
+        
+        if count >= limit:
+            return False
+            
+        if count == 0:
+            cache.set(cache_key, 1, 60)
+        else:
+            cache.incr(cache_key)
+            
+        return True

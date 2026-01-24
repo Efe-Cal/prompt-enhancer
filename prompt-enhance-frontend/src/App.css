@@ -449,3 +449,16 @@
 .dialog-btn.secondary:hover {
   background-color: #d4c6b0;
 }
+
+.question-group {
+  margin-bottom: 16px;
+}
+
+.question-group .dialog-question {
+  margin: 0 0 8px 0;
+}
+
+.question-group .form-input {
+  background-color: #f5efe6;
+  border: 1px solid #ccc;
+}

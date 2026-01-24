@@ -28,3 +28,4 @@ tzdata==2025.3
 urllib3==2.6.3
 channels==4.2.0
 daphne==4.1.2
+django-ratelimit==4.1.0
