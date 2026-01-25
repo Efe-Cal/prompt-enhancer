@@ -24,9 +24,4 @@ from .views import serve_react
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
-    # Serve static files from the Vite build
-    re_path(r'^assets/(?P<path>.*)$', serve, {'document_root': settings.FRONTEND_BUILD_DIR / 'assets'}),
-    re_path(r'^(?P<path>vite\.svg)$', serve, {'document_root': settings.FRONTEND_BUILD_DIR}),
-    # Catch-all pattern for React frontend - must be last
-    re_path(r'^.*$', serve_react, name='react-app'),
 ]
