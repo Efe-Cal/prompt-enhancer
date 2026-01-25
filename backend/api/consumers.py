@@ -116,10 +116,11 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             result = await enhance_prompt_async(
                 task=data.get('task', ''),
                 lazy_prompt=data.get('lazy_prompt', ''),
-                model=data.get('model') or os.getenv("MODEL", "gpt-4o"),
+                model=os.getenv("MODEL", "gemini-3-flash-preview"),
                 use_web_search=data.get('use_web_search', True),
                 additional_context_query=data.get('additional_context_query', ''),
-                ask_user_func=self.ask_user_question
+                ask_user_func=self.ask_user_question,
+                target_model=data.get('target_model', 'gpt-5.1')
             )
             
             print(f"[WebSocket] Enhancement complete, result length: {len(result)}")

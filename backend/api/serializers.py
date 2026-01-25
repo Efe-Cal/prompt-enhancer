@@ -7,6 +7,7 @@ class EnhancePromptRequestSerializer(serializers.Serializer):
     lazy_prompt = serializers.CharField(required=True)
     use_web_search = serializers.BooleanField(required=False, default=False)
     additional_context_query = serializers.CharField(required=False, allow_blank=True, default="")
+    target_model = serializers.CharField(required=True)
 
 
 class EnhancePromptResponseSerializer(serializers.Serializer):

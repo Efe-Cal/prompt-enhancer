@@ -131,7 +131,8 @@
 .main-content {
   flex: 1;
   padding: 40px 60px;
-  max-width: 800px;
+  max-width: 700px;
+
 }
 
 .main-title {
@@ -439,4 +440,33 @@
 .question-group .form-input {
   background-color: #f5efe6;
   border: 1px solid #ccc;
+}
+
+/* Model Selector */
+.model-selector {
+  display: flex;
+  align-items: center;
+}
+
+.model-input {
+  padding: 10px 16px;
+  background-color: #f7f1e9;
+  border: 1px solid #d4c6b0;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #5d4a35;
+  transition: all 0.2s;
+  outline: none;
+  min-width: 250px;
+}
+
+.model-input:hover {
+  background-color: #fff;
+  border-color: #b8956c;
+}
+
+.model-input:focus {
+  border-color: #b8956c;
+  box-shadow: 0 0 0 2px rgba(184, 149, 108, 0.2);
+  background-color: #fff;
 }

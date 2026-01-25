@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 
-const API_BASE_URL = 'http://localhost:8000'
 
 interface SavedEntry {
   id: number
@@ -30,6 +29,31 @@ function App() {
     handleRefresh()
   }, [])
 
+  const [models, setModels] = useState<string[]>([])
+  const [targetModel, setTargetModel] = useState<string>('')
+
+  const formatModelName = (name: string) => {
+    // take the part after "/"
+    return name.split('/').pop() || name
+  }
+
+  useEffect(() => {
+    fetch('/hackclub-api/proxy/v1/models')
+      .then(res => res.json())
+      .then(data => {
+        let fetchedModels: string[] = []
+        if (Array.isArray(data)) {
+          fetchedModels = data.map((m: any) => formatModelName(m.id))
+        } else if (data.data && Array.isArray(data.data)) {
+          fetchedModels = data.data.map((m: any) => formatModelName(m.id))
+        }
+        setModels(fetchedModels)
+      })
+      .catch(err => console.error('Failed to fetch models:', err))
+  }, [])
+
+
+
   const handleEnhance = () => {
     setIsLoading(true)
     setEnhancedPrompt('')
@@ -41,7 +65,8 @@ function App() {
     const taskId = crypto.randomUUID()
 
     // Connect to WebSocket FIRST
-    const websocket = new WebSocket(`ws://localhost:8000/ws/enhance/${taskId}/`)
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
+    const websocket = new WebSocket(`${wsUrl}/ws/enhance/${taskId}/`)
 
     websocket.onopen = () => {
       console.log('WebSocket connected')
@@ -53,6 +78,7 @@ function App() {
         lazy_prompt: prompt,
         use_web_search: useWebSearch,
         additional_context_query: searchQuery,
+        target_model: targetModel,
       }))
       console.log('Enhance request sent via WebSocket')
     }
@@ -286,8 +312,22 @@ function App() {
           <button className="enhance-btn" onClick={handleEnhance}>
             Enhance
           </button>
-          {/* Save button removed for auto-save */}
-          <span className="model-indicator">Model: gemini-3-flash-preview</span>
+
+          <div className="model-selector">
+            <input
+              type="text"
+              list="models-list"
+              value={targetModel}
+              onChange={(e) => setTargetModel(e.target.value)}
+              className="form-input model-input"
+              placeholder="Target Model (e.g. gpt-5-mini)"
+            />
+            <datalist id="models-list">
+              {models.map(model => (
+                <option key={model} value={model} />
+              ))}
+            </datalist>
+          </div>
         </div>
       </main>
 

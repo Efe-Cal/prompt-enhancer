@@ -210,12 +210,23 @@ def format_answers_for_llm(questions:list[str],answers: list[str]) -> str:
     else:
         return "\n".join([f"Q: {q}\nA: {answer}" for q, answer in zip(questions, answers)])
 
+def parse_llm_response(response: str) -> None:
+    improved_prompt_match = re.search(r"<improved_prompt>(.*?)</improved_prompt>", response, re.DOTALL)
+    if improved_prompt_match:
+        improved_prompt = improved_prompt_match.group(1).strip()
+        print(f"[DEBUG] Parsed Improved Prompt: {improved_prompt[:50]}...")
+        return improved_prompt
+    else:
+        print("[DEBUG] No <improved_prompt> tag found in LLM response.")
+        return None
+
 async def enhance_prompt_async(
     task: str,
     lazy_prompt: str,
     model: str,
     use_web_search: bool = True,
     additional_context_query: Optional[str] = None,
+    target_model: str = "gpt-5.1",
     ask_user_func: Optional[Callable[[str], Awaitable[str]]] = None,
     falling_back: bool = False
 ) -> str:
@@ -230,7 +241,8 @@ async def enhance_prompt_async(
             task=task,
             lazy_prompt=lazy_prompt,
             use_web_search=use_web_search,
-            additional_context=additional_context
+            additional_context=additional_context,
+            target_model=target_model
         ).values()
 
     messages = [
@@ -282,7 +294,8 @@ async def enhance_prompt_async(
         response = await client.chat.completions.create(
             model=model,
             messages=messages,
-            tools=tools
+            tools=tools,
+            reasoning_effort="medium"
         )
         print(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")
         
@@ -320,14 +333,14 @@ async def enhance_prompt_async(
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
-                tools=tools
+                tools=tools,
+                reasoning_effort="medium"
             )
             print(f"[DEBUG] Next LLM Response (Async): {response.choices[0].message}")
 
         result = (response.choices[0].message.content or "").strip()
-        start_index = result.find("IMPROVED PROMPT:")
-        if start_index != -1:
-            result = result[start_index + len("IMPROVED PROMPT:"):].strip()
+        
+        result = parse_llm_response(result)
         
         return result
     except openai.APIStatusError as e:

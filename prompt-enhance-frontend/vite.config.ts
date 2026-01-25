@@ -11,6 +11,15 @@ export default defineConfig({
     }),
   ],
   base: '/',
+  server: {
+    proxy: {
+      '/hackclub-api': {
+        target: 'https://ai.hackclub.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/hackclub-api/, ''),
+      },
+    },
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

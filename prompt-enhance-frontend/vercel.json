@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/hackclub-api/:match*",
+      "destination": "https://ai.hackclub.com/:match*"
+    }
+  ]
+}
