@@ -18,7 +18,7 @@ function App() {
   const [useWebSearch, setUseWebSearch] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedEntry, setSelectedEntry] = useState('')
-  const [detailsOpen, setDetailsOpen] = useState(false)
+
   const [savedEntries, setSavedEntries] = useState<SavedEntry[]>()
   const [isLoading, setIsLoading] = useState(false)
   const [ws, setWs] = useState<WebSocket | null>(null)
@@ -26,7 +26,7 @@ function App() {
   const [userAnswers, setUserAnswers] = useState<string[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  useEffect(() => { 
+  useEffect(() => {
     handleRefresh()
   }, [])
 
@@ -36,16 +36,16 @@ function App() {
     setErrorMessage(null)
     setUserQuestions(null)
     setUserAnswers([])
-    
+
     // Generate task ID on client side
     const taskId = crypto.randomUUID()
-        
+
     // Connect to WebSocket FIRST
     const websocket = new WebSocket(`ws://localhost:8000/ws/enhance/${taskId}/`)
-    
+
     websocket.onopen = () => {
       console.log('WebSocket connected')
-      
+
       // Send enhance request directly through WebSocket
       websocket.send(JSON.stringify({
         type: 'enhance',
@@ -56,11 +56,11 @@ function App() {
       }))
       console.log('Enhance request sent via WebSocket')
     }
-    
+
     websocket.onmessage = (event) => {
       console.log('WebSocket message received:', event.data)
       const data = JSON.parse(event.data)
-      
+
       if (data.type === 'processing') {
         console.log('Enhancement processing started')
       } else if (data.type === 'user_question') {
@@ -71,6 +71,7 @@ function App() {
         // Task finished, display result
         console.log('Task complete, result length:', data.result?.length)
         setEnhancedPrompt(data.result)
+        saveToLocalStorage(task, prompt, data.result)
         setIsLoading(false)
         websocket.close()
       } else if (data.type === 'task_error') {
@@ -84,17 +85,17 @@ function App() {
         setUserAnswers([])
       }
     }
-    
+
     websocket.onerror = (error) => {
       console.error('WebSocket error:', error)
       setIsLoading(false)
     }
-    
+
     websocket.onclose = () => {
       console.log('WebSocket disconnected')
       setWs(null)
     }
-    
+
     setWs(websocket)
   }
 
@@ -115,48 +116,47 @@ function App() {
     })
   }
 
-  const handleSave = () => {
-    fetch(`${API_BASE_URL}/api/save/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        task,
-        lazy_prompt: prompt,
-        enhanced_prompt: enhancedPrompt,
-      }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Entry saved:', data)
-      })
-      .catch(error => {
-        console.error('Error saving entry:', error)
-      }
-    )
+  const saveToLocalStorage = (currentTask: string, currentPrompt: string, result: string) => {
+    const newEntry: SavedEntry = {
+      id: Date.now(),
+      task: currentTask,
+      lazy_prompt: currentPrompt,
+      enhanced_prompt: result,
+      created_at: new Date().toLocaleString()
+    }
+
+    const existingEntries = JSON.parse(localStorage.getItem('saved_prompts') || '[]')
+    const updatedEntries = [newEntry, ...existingEntries]
+    localStorage.setItem('saved_prompts', JSON.stringify(updatedEntries))
+    setSavedEntries(updatedEntries)
+    console.log('Auto-saved to local storage:', newEntry)
   }
 
-  const handleLoad = () => {
-    const entry = savedEntries?.find(e => e.id === Number(selectedEntry))
+  const handleLoad = (id: number) => {
+    const entry = savedEntries?.find(e => e.id === id)
     if (entry) {
       setTask(entry.task)
       setPrompt(entry.lazy_prompt)
       setEnhancedPrompt(entry.enhanced_prompt)
+      setSelectedEntry(String(id))
+    }
+  }
+
+  const handleDelete = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const updatedEntries = savedEntries?.filter(entry => entry.id !== id) || []
+    setSavedEntries(updatedEntries)
+    localStorage.setItem('saved_prompts', JSON.stringify(updatedEntries))
+    if (selectedEntry === String(id)) {
+      setSelectedEntry('')
     }
   }
 
   const handleRefresh = () => {
-    fetch(`${API_BASE_URL}/api/prompts/`)
-      .then(response => response.json())
-      .then(data => {
-        setSavedEntries(data.prompts)
-        console.log('Fetched prompts:', data)
-      })
-      .catch(error => {
-        console.error('Error fetching prompts:', error)
-      })
-
+    const stored = localStorage.getItem('saved_prompts')
+    if (stored) {
+      setSavedEntries(JSON.parse(stored))
+    }
   }
 
   return (
@@ -183,8 +183,8 @@ function App() {
               <button className="dialog-btn primary" onClick={handleAnswerSubmit}>
                 Submit
               </button>
-              <button 
-                className="dialog-btn secondary" 
+              <button
+                className="dialog-btn secondary"
                 onClick={() => setUserQuestions(null)}
               >
                 Cancel
@@ -196,47 +196,36 @@ function App() {
 
       {/* Left Sidebar - History */}
       <aside className="sidebar">
-        <h2 className="sidebar-title">History</h2>        
-        <button className="refresh-btn" onClick={handleRefresh}>
-          Refresh
-        </button>
+        <h2 className="sidebar-title">History</h2>
+        {/* Refresh button removed for auto-refresh */}
 
         <div className="saved-entries-section">
-          <label className="saved-entries-label">Saved entries</label>
-          <select 
-            className="saved-entries-select"
-            value={selectedEntry}
-            onChange={(e) => setSelectedEntry(e.target.value)}
-          >
+          <div className="saved-list">
             {savedEntries?.map(entry => (
-              <option key={entry.id} value={entry.id}>
-                {entry.task || 'Untitled'} ({entry.created_at})
-              </option>
+              <div key={entry.id} className={`saved-item ${selectedEntry === String(entry.id) ? 'active' : ''}`}>
+                <button
+                  className="saved-item-main"
+                  onClick={() => handleLoad(entry.id)}
+                >
+                  <span className="saved-item-title">{entry.task || 'Untitled'}</span>
+                  <span className="saved-item-date">{entry.created_at}</span>
+                </button>
+                <button
+                  className="saved-item-delete"
+                  onClick={(e) => handleDelete(entry.id, e)}
+                  title="Delete"
+                >
+                  ×
+                </button>
+              </div>
             ))}
-          </select>
-
-          <div className="load-section">
-            <button className="load-btn" onClick={handleLoad}>
-              Load
-            </button>
-            <span className="saved-count">{savedEntries?.length} saved</span>
+            {(!savedEntries || savedEntries.length === 0) && (
+              <div className="empty-history">No saved prompts yet</div>
+            )}
           </div>
         </div>
 
-        <div className="details-section">
-          <button 
-            className="details-toggle"
-            onClick={() => setDetailsOpen(!detailsOpen)}
-          >
-            <span className={`details-arrow ${detailsOpen ? 'open' : ''}`}>›</span>
-            Details
-          </button>
-          {detailsOpen && (
-            <div className="details-content">
-              {/* Details content would go here */}
-            </div>
-          )}
-        </div>
+
       </aside>
 
       {/* Main Content */}
@@ -288,7 +277,7 @@ function App() {
         </div>
 
         {errorMessage && (
-          <div className="error-message" style={{ color: 'red', marginTop: '10px', marginBottom:'10px', padding: '10px', border: '1px solid red', borderRadius: '4px', backgroundColor: '#ffe6e6' }}>
+          <div className="error-message" style={{ color: 'red', marginTop: '10px', marginBottom: '10px', padding: '10px', border: '1px solid red', borderRadius: '4px', backgroundColor: '#ffe6e6' }}>
             {errorMessage}
           </div>
         )}
@@ -297,9 +286,7 @@ function App() {
           <button className="enhance-btn" onClick={handleEnhance}>
             Enhance
           </button>
-          <button className="save-btn" onClick={handleSave}>
-            Save
-          </button>
+          {/* Save button removed for auto-save */}
           <span className="model-indicator">Model: gemini-3-flash-preview</span>
         </div>
       </main>
