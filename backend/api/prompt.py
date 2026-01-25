@@ -23,11 +23,13 @@ def build_prompts(task: str, lazy_prompt: str, use_web_search: bool, additional_
     
     workflow = "\n".join(f"{i}. {step}" for i, step in enumerate(workflow, start=1))
 
-    additional_context = (
+    additional_context_full = (
         "\n<additional_context>\nThe following information was retrieved via a web search. ACCEPT IT AS FACTUAL AND TRUE.\n"
         + additional_context
         + "\n</additional_context>\n"
     ) if additional_context else ""
+
+    additional_context_desc = "- Additional context derived from a web search made by the user.\n" if additional_context else ""
 
 
     # ===================================
@@ -69,7 +71,7 @@ Apply the following framework to every improvement:
 <input-components>
 - A "task" that describes the high-level goal of the prompt.
 - A "raw input" that you should expect to be vague, ambiguous, or incomplete. DO NOT question the validity of the information in the raw input; assume it is true.
-{"- Additional context derived from a web search made by the user.\n" if additional_context else ""}</input-components>
+{additional_context_desc}</input-components>
 
 <workflow>
 {workflow}
@@ -119,7 +121,7 @@ Here you provide the optimized, ready-to-use prompt text:
     USER_PROMPT = f"""<task>
 {task}
 </task>
-{additional_context}
+{additional_context_full}
 <raw_input>
 {lazy_prompt}
 </raw_input>
