@@ -162,7 +162,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_HOSTS = [
+    "https://prompt-enhancer-hc.vercel.app/"
+]
+
 
 # WebSocket Rate Limiting
 WS_RATE_LIMIT = 3 if not DEBUG else 99  # Requests per minute
