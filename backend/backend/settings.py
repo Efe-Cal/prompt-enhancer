@@ -156,7 +156,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 
 # WebSocket Rate Limiting
-WS_RATE_LIMIT = 5  # Requests per minute
+WS_RATE_LIMIT = 2 if not DEBUG else 99  # Requests per minute
 
 # REST Framework settings
 REST_FRAMEWORK = {

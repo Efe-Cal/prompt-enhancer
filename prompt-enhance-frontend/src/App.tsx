@@ -288,7 +288,7 @@ function App() {
         </div>
 
         {errorMessage && (
-          <div className="error-message" style={{ color: 'red', marginTop: '10px', padding: '10px', border: '1px solid red', borderRadius: '4px', backgroundColor: '#ffe6e6' }}>
+          <div className="error-message" style={{ color: 'red', marginTop: '10px', marginBottom:'10px', padding: '10px', border: '1px solid red', borderRadius: '4px', backgroundColor: '#ffe6e6' }}>
             {errorMessage}
           </div>
         )}
