@@ -4,28 +4,21 @@
 
 **An intelligent AI-powered prompt enhancement platform that transforms basic prompts into detailed, effective instructions**
 
-[![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/Django-5.2+-green.svg)](https://www.djangoproject.com/)
-[![React](https://img.shields.io/badge/React-19.2-blue.svg)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
-
 </div>
 
 ---
 
 ## 📖 Overview
 
-PromptEnhance is a full-stack web application designed to help users create better AI prompts through intelligent enhancement. It leverages advanced prompt engineering principles and AI to transform simple, "lazy" prompts into comprehensive, well-structured instructions that yield superior results from language models.
+PromptEnhance is a web application designed to help users create better AI prompts through intelligent enhancement. It leverages advanced prompt engineering principles and AI to transform simple, "lazy" prompts into comprehensive, well-structured instructions that yield superior results from language models.
 
 ### Key Features
 
-✨ **Smart Prompt Enhancement** - AI-powered prompt improvement with best practices built-in  
+✨ **Smart Prompt Enhancement** - AI-powered prompt improvement with best practices built-in
+❓ **Questioning** - Interactive prompt refinement through user feedback
 🔍 **Web Search Integration** - Optional context enrichment using real-time web data  
-💾 **Prompt Library** - Save and manage your enhanced prompts  
+💾 **Prompt Library** - Save your enhanced prompts on your device
 🎨 **Modern UI** - Clean, responsive React/TypeScript frontend  
-⚡ **Fast API** - Django REST framework backend  
-🔧 **Flexible Configuration** - Support for custom OpenAI-compatible API endpoints  
-📱 **Dual Interface** - Both Streamlit standalone and React web app options
 
 ---
 
@@ -35,15 +28,15 @@ The project consists of three main components:
 
 ```
 PromptEnhance/
-├── app.py                      # Streamlit standalone application
 ├── backend/                    # Django REST API
 │   ├── api/                   # Main API app
 │   │   ├── enhance.py        # Prompt enhancement logic
 │   │   ├── views.py          # API endpoints
-│   │   ├── models.py         # Database models
+│   │   ├── consumers.py      # WebSocket consumers
+│   │   ├── prompt.py         # Prompt builder utilities
 │   │   └── serializers.py    # DRF serializers
 │   └── backend/              # Django project settings
-└── prompt-enhance-frontend/   # React/TypeScript frontend
+└── prompt-enhance-frontend/   # Vite/TypeScript frontend
     └── src/
 ```
 
@@ -54,7 +47,7 @@ PromptEnhance/
 ### Prerequisites
 
 - **Python 3.7+**
-- **Node.js 18+** (for React frontend)
+- **Node.js 18+** (for Vite frontend)
 - **npm or yarn** (for frontend dependencies)
 - **OpenAI API key** or compatible API endpoint
 
@@ -74,7 +67,7 @@ cd PromptEnhance
 python -m venv venv
 
 # Windows
-venv\Scripts\activate
+venv\Scripts\activate.bat
 
 # macOS/Linux
 source venv/bin/activate
@@ -82,9 +75,8 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Navigate to backend and run migrations
+# Navigate to backend
 cd backend
-python manage.py migrate
 
 # Start Django development server
 python manage.py runserver
@@ -107,40 +99,22 @@ npm run dev
 
 The frontend will be available at `http://localhost:5173`
 
-#### 4. Streamlit App (Optional)
-
-For the standalone Streamlit interface:
-
-```bash
-# From root directory with venv activated
-streamlit run app.py
-```
-
-Access at `http://localhost:8501`
-
 ---
 
 ## ⚙️ Configuration
 
-Create a `.env` file in the project root:
+Create a `.env` file in the `backend/` directory with the following content:
 
 ```env
 API_KEY=your-api-key-here
-BASE_URL=https://api.openai.com/v1
-MODEL=gpt-5.1
+BASE_URL=BASE_URL=https://ai.hackclub.com/proxy/v1
+MODEL=gemini-3-flash-preview
+HACKCLUB_SEARCH_API_KEY=your-hackclub-search-api-key
 
 # Django Settings (if needed)
 SECRET_KEY=your-django-secret-key
 DEBUG=True
 ```
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OPENAI_API_KEY` | Your OpenAI API key | Required |
-| `OPENAI_BASE_URL` | API endpoint (supports compatible APIs) | `https://api.openai.com/v1` |
-| `OPENAI_MODEL` | Model to use for enhancement | `gpt-5.1` |
 
 ---
 
@@ -152,56 +126,17 @@ DEBUG=True
 2. **Input Your Prompt** - Write your initial prompt
 3. **Enable Web Search** (Optional) - Include additional context from web
 4. **Enhance** - Click to generate an improved version
-5. **Save** - Store your enhanced prompts for future reference
-
-### API Endpoints
-
-#### POST `/api/enhance/`
-
-Enhance a prompt using AI.
-
-**Request Body:**
-```json
-{
-  "task": "Creating a blog post",
-  "lazy_prompt": "Write about AI",
-  "use_web_search": false,
-  "additional_context_query": ""
-}
-```
-
-**Response:**
-```json
-{
-  "enhancedPrompt": "Act as an expert content writer specializing in AI technology..."
-}
-```
-
-#### POST `/api/save/`
-
-Save an enhanced prompt to the database.
-
-**Request Body:**
-```json
-{
-  "task": "Blog post writing",
-  "lazy_prompt": "Write about AI",
-  "enhanced_prompt": "Enhanced version..."
-}
-```
+5. **Questioning** - Answer follow-up questions to refine further
 
 ---
 
 ## 💡 How It Works
 
-1. **Prompt Analysis** - The system analyzes your input prompt and task context
-2. **Best Practices Application** - Applies expert prompt engineering principles:
-   - Adds role-based context ("Act as an expert...")
-   - Structures instructions clearly
-   - Adds specificity and detail
-   - Includes formatting guidelines
+1. **Prompt Analysis** - The system analyzes your input prompt and task context, finding areas for improvement and missing context
+2. **Interactive Questioning** - Asks clarifying questions to gather more details
 3. **Web Enhancement** (Optional) - Enriches prompts with current information
-4. **Output Generation** - Returns a production-ready enhanced prompt
+4. **Best Practices Application** - Applies expert prompt engineering principles
+5. **Output Generation** - Returns a production-ready enhanced prompt
 
 ---
 
@@ -240,9 +175,8 @@ cd backend
 # Collect static files
 python manage.py collectstatic
 
-# Run with production server (e.g., gunicorn)
-pip install gunicorn
-gunicorn backend.wsgi:application
+# Run with production server
+daphe -b 0.0.0.0 -p 8000 backend.asgi:application
 ```
 
 ---
@@ -251,10 +185,9 @@ gunicorn backend.wsgi:application
 
 ### Project Structure Details
 
-- **`app.py`** - Standalone Streamlit application with all features
-- **`backend/api/enhance.py`** - Core prompt enhancement logic and system prompts
+- **`backend/api/consumers.py`** - WebSocket consumers for real-time interactions (Core logic)
+- **`backend/api/prompt.py`** - Prompt builder utilities
 - **`backend/api/views.py`** - REST API endpoint handlers
-- **`backend/api/models.py`** - Database schema for saved prompts
 - **`prompt-enhance-frontend/src/`** - React application source code
 
 
