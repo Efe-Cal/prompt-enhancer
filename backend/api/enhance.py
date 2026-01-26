@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from openai import OpenAI, AsyncOpenAI
 
 from .prompt import build_prompts
+from . import log
 
 load_dotenv()
 
@@ -44,7 +45,7 @@ def clean_text_for_llm(text):
     return text.strip()
 
 async def web_search_async(query: str, n=3) -> str:
-    print(f"Performing async web search for query: {query}")
+    log(f"Performing async web search for query: {query}")
     async with httpx.AsyncClient() as client:
         response = await client.get(
             'https://search.hackclub.com/res/v1/web/search',
@@ -72,10 +73,10 @@ def parse_llm_response(response: str) -> None:
     improved_prompt_match = re.search(r"<improved-prompt>(.*?)</improved-prompt>", response, re.DOTALL)
     if improved_prompt_match:
         improved_prompt = improved_prompt_match.group(1).strip()
-        print(f"[DEBUG] Parsed Improved Prompt: {improved_prompt[:50]}...")
+        log(f"[DEBUG] Parsed Improved Prompt: {improved_prompt[:50]}...")
         return improved_prompt
     else:
-        print("[DEBUG] No <improved-prompt> tag found in LLM response.")
+        log("[DEBUG] No <improved-prompt> tag found in LLM response.")
         return None
 
 async def enhance_prompt_async(
@@ -155,16 +156,16 @@ async def enhance_prompt_async(
             tools=tools,
             reasoning_effort="medium"
         )
-        print(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")
+        log(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")
         
         while response.choices[0].message.tool_calls:
             messages.append(response.choices[0].message)
             for tool_call in response.choices[0].message.tool_calls:
-                print(f"[DEBUG] Processing Tool Call (Async): {tool_call.function.name} with args: {tool_call.function.arguments}")
+                log(f"[DEBUG] Processing Tool Call (Async): {tool_call.function.name} with args: {tool_call.function.arguments}")
                 if tool_call.function.name == "web_search":
                     args = json.loads(tool_call.function.arguments)
                     search_result = await web_search_async(args["query"])
-                    print(f"[DEBUG] Tool Result ({tool_call.function.name}): {search_result[:100]}...")
+                    log(f"[DEBUG] Tool Result ({tool_call.function.name}): {search_result[:100]}...")
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
@@ -172,7 +173,7 @@ async def enhance_prompt_async(
                     })
                 elif tool_call.function.name == "get_user_input":
                     args = json.loads(tool_call.function.arguments)
-                    print("Asking user question via WebSocket...")
+                    log("Asking user question via WebSocket...")
                     if ask_user_func:
                         user_input = await ask_user_func(args["questions"])
                     else:
@@ -180,7 +181,7 @@ async def enhance_prompt_async(
                     
                     user_input = format_answers_for_llm(args["questions"], user_input)
                     
-                    print(f"[DEBUG] Tool Result ({tool_call.function.name}): {user_input}")
+                    log(f"[DEBUG] Tool Result ({tool_call.function.name}): {user_input}")
 
                     messages.append({
                         "role": "tool",
@@ -194,7 +195,7 @@ async def enhance_prompt_async(
                 tools=tools,
                 reasoning_effort="medium"
             )
-            print(f"[DEBUG] Next LLM Response (Async): {response.choices[0].message}")
+            log(f"[DEBUG] Next LLM Response (Async): {response.choices[0].message}")
 
         result = (response.choices[0].message.content or "").strip()
         
@@ -202,8 +203,8 @@ async def enhance_prompt_async(
         
         return result
     except openai.APIStatusError as e:
-        print(f"APIStatusError: {e}")
-        print("Falling back to alternative model...")
+        log(f"APIStatusError: {e}")
+        log("Falling back to alternative model...")
         return await enhance_prompt_async(
             task, lazy_prompt, "gpt-5.1", use_web_search, 
             additional_context_query, ask_user_func, falling_back=True

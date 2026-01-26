@@ -7,9 +7,9 @@ from django.core.cache import cache
 from django.conf import settings
 from asgiref.sync import sync_to_async
 from dotenv import load_dotenv
+from . import log
 
 load_dotenv()
-
 
 class EnhanceConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
@@ -24,7 +24,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
         self.pending_answer = None
         self.answer_event = asyncio.Event()
 
-        print(f"[WebSocket] Client connecting to group: {self.room_group_name}")
+        log(f"[WebSocket] Client connecting to group: {self.room_group_name}")
 
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -32,10 +32,10 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
         )
 
         await self.accept()
-        print(f"[WebSocket] Client connected and joined group: {self.room_group_name}")
+        log(f"[WebSocket] Client connected and joined group: {self.room_group_name}")
 
     async def disconnect(self, close_code):
-        print(f"[WebSocket] Client disconnecting from group: {self.room_group_name}")
+        log(f"[WebSocket] Client disconnecting from group: {self.room_group_name}")
         if self.enhancement_task and not self.enhancement_task.done():
             self.enhancement_task.cancel()
         await self.channel_layer.group_discard(
@@ -44,11 +44,11 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
-        print(f"[WebSocket] Received message: {text_data[:200]}")
+        log(f"[WebSocket] Received message: {text_data[:200]}")
         try:
             text_data_json = json.loads(text_data)
             message_type = text_data_json.get('type')
-            print(f"[WebSocket] Message type: {message_type}")
+            log(f"[WebSocket] Message type: {message_type}")
 
             if message_type == 'user_answer':
                 answer = text_data_json.get('answers')
@@ -66,14 +66,14 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 is_allowed = await sync_to_async(self._check_rate_limit_sync)(client_ip)
                 
                 if not is_allowed:
-                    print(f"[WebSocket] Rate limit exceeded for IP: {client_ip}")
+                    log(f"[WebSocket] Rate limit exceeded for IP: {client_ip}")
                     await self.send(text_data=json.dumps({
                         'type': 'task_error',
                         'error': 'Rate limit exceeded. Please wait a minute before trying again.'
                     }))
                     return
 
-                print("[WebSocket] Starting enhancement...")
+                log("[WebSocket] Starting enhancement...")
                 # Send acknowledgment first
                 await self.send(text_data=json.dumps({
                     'type': 'processing',
@@ -85,7 +85,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                     self._run_enhancement_with_callback(text_data_json)
                 )
         except Exception as e:
-            print(f"[WebSocket] Error in receive: {e}")
+            log(f"[WebSocket] Error in receive: {e}")
             traceback.print_exc()
 
     async def _run_enhancement_with_callback(self, data):
@@ -93,9 +93,9 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
         try:
             await self.run_enhancement(data)
         except asyncio.CancelledError:
-            print("[WebSocket] Enhancement task was cancelled")
+            log("[WebSocket] Enhancement task was cancelled")
         except Exception as e:
-            print(f"[WebSocket] Unhandled error in enhancement: {e}")
+            log(f"[WebSocket] Unhandled error in enhancement: {e}")
             traceback.print_exc()
             try:
                 await self.send(text_data=json.dumps({
@@ -111,7 +111,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             # Import here to avoid circular imports at module load time
             from .enhance import enhance_prompt_async
             
-            print(f"[WebSocket] Calling enhance_prompt_async with task: {data.get('task', '')[:50]}")
+            log(f"[WebSocket] Calling enhance_prompt_async with task: {data.get('task', '')[:50]}")
             
             result = await enhance_prompt_async(
                 task=data.get('task', ''),
@@ -123,16 +123,16 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 target_model=data.get('target_model', 'gpt-5.1')
             )
             
-            print(f"[WebSocket] Enhancement complete, result length: {len(result)}")
+            log(f"[WebSocket] Enhancement complete, result length: {len(result)}")
             
             await self.send(text_data=json.dumps({
                 'type': 'task_complete',
                 'result': result
             }))
-            print("[WebSocket] Sent task_complete to client")
+            log("[WebSocket] Sent task_complete to client")
             
         except Exception as e:
-            print(f"[WebSocket] Enhancement error: {e}")
+            log(f"[WebSocket] Enhancement error: {e}")
             traceback.print_exc()
             await self.send(text_data=json.dumps({
                 'type': 'task_error',
@@ -144,7 +144,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
         self.answer_event.clear()
         self.pending_answer = None
         
-        print(f"[WebSocket] Asking user question: {questions}")
+        log(f"[WebSocket] Asking user question: {questions}")
         await self.send(text_data=json.dumps({
             'type': 'user_question',
             'questions': questions
@@ -154,7 +154,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             await asyncio.wait_for(self.answer_event.wait(), timeout=timeout)
             answer = self.pending_answer
             self.pending_answer = None
-            print(f"[WebSocket] Got user answer: {answer}")
+            log(f"[WebSocket] Got user answer: {answer}")
             return answer or ""
         except asyncio.TimeoutError:
             raise TimeoutError(f"User did not respond within {timeout} seconds")
