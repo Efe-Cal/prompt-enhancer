@@ -60,14 +60,16 @@ async def web_search_async(query: str, n=3) -> str:
     
     return data_str
 
-def format_answers_for_llm(questions:list[str],answers: list[str]) -> str:
+def format_answers_for_llm(questions:list[str],answers: list[str] | str) -> str:
+    if answers == "CANCEL":
+        return "User refused to answer the questions."
     if len(answers) == 1:
         return answers[0]
     else:
-        return "\n".join([f"Q: {q}\nA: {answer}" for q, answer in zip(questions, answers)])
+        return "\n".join([f"Q: {q}\nA: {answer if answer else 'User did not provide an answer for this question.'}" for q, answer in zip(questions, answers)])
 
 def parse_llm_response(response: str) -> None:
-    improved_prompt_match = re.search(r"<improved-prompt>(.*?)</improved_prompt>", response, re.DOTALL)
+    improved_prompt_match = re.search(r"<improved-prompt>(.*?)</improved-prompt>", response, re.DOTALL)
     if improved_prompt_match:
         improved_prompt = improved_prompt_match.group(1).strip()
         print(f"[DEBUG] Parsed Improved Prompt: {improved_prompt[:50]}...")

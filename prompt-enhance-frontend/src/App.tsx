@@ -185,6 +185,17 @@ function App() {
     }
   }
 
+  const handleQuestionCancel = () => {
+    setUserQuestions(null)
+    setUserAnswers([])
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'user_answer',
+        answers: "CANCEL"
+      }))
+    }
+  }
+
   return (
     <div className="app-container">
       {/* User Question Dialog */}
@@ -201,7 +212,7 @@ function App() {
                   placeholder="Your answer..."
                   value={userAnswers[index] || ''}
                   onChange={(e) => handleAnswerChange(index, e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && index === userQuestions.length - 1 && handleAnswerSubmit()}
+                  onKeyDown={(e) => e.key === 'Enter' && index === userQuestions.length - 1 && handleAnswerSubmit()}
                 />
               </div>
             ))}
@@ -211,7 +222,7 @@ function App() {
               </button>
               <button
                 className="dialog-btn secondary"
-                onClick={() => setUserQuestions(null)}
+                onClick={handleQuestionCancel}
               >
                 Cancel
               </button>
