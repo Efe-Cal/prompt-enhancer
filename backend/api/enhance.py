@@ -1,5 +1,5 @@
 import os
-import json
+import json_repair as json
 import unicodedata
 import re
 from typing import Callable, Awaitable, Optional
@@ -67,13 +67,13 @@ def format_answers_for_llm(questions:list[str],answers: list[str]) -> str:
         return "\n".join([f"Q: {q}\nA: {answer}" for q, answer in zip(questions, answers)])
 
 def parse_llm_response(response: str) -> None:
-    improved_prompt_match = re.search(r"<improved_prompt>(.*?)</improved_prompt>", response, re.DOTALL)
+    improved_prompt_match = re.search(r"<improved-prompt>(.*?)</improved_prompt>", response, re.DOTALL)
     if improved_prompt_match:
         improved_prompt = improved_prompt_match.group(1).strip()
         print(f"[DEBUG] Parsed Improved Prompt: {improved_prompt[:50]}...")
         return improved_prompt
     else:
-        print("[DEBUG] No <improved_prompt> tag found in LLM response.")
+        print("[DEBUG] No <improved-prompt> tag found in LLM response.")
         return None
 
 async def enhance_prompt_async(
