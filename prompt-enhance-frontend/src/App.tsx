@@ -19,16 +19,15 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedEntry, setSelectedEntry] = useState('')
 
-  const [savedEntries, setSavedEntries] = useState<SavedEntry[]>()
+  const [savedEntries, setSavedEntries] = useState<SavedEntry[]>(() => {
+    const stored = localStorage.getItem('saved_prompts')
+    return stored ? JSON.parse(stored) : []
+  })
   const [isLoading, setIsLoading] = useState(false)
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [userQuestions, setUserQuestions] = useState<Array<string> | null>(null)
   const [userAnswers, setUserAnswers] = useState<string[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  useEffect(() => {
-    handleRefresh()
-  }, [])
 
   const [models, setModels] = useState<string[]>([])
   const [targetModel, setTargetModel] = useState<string>('')
@@ -44,9 +43,9 @@ function App() {
       .then(data => {
         let fetchedModels: string[] = []
         if (Array.isArray(data)) {
-          fetchedModels = data.map((m: any) => formatModelName(m.id))
+          fetchedModels = data.map((m: { id: string }) => formatModelName(m.id))
         } else if (data.data && Array.isArray(data.data)) {
-          fetchedModels = data.data.map((m: any) => formatModelName(m.id))
+          fetchedModels = data.data.map((m: { id: string }) => formatModelName(m.id))
         }
         setModels(fetchedModels)
       })
@@ -176,13 +175,6 @@ function App() {
     localStorage.setItem('saved_prompts', JSON.stringify(updatedEntries))
     if (selectedEntry === String(id)) {
       setSelectedEntry('')
-    }
-  }
-
-  const handleRefresh = () => {
-    const stored = localStorage.getItem('saved_prompts')
-    if (stored) {
-      setSavedEntries(JSON.parse(stored))
     }
   }
 
