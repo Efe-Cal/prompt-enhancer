@@ -113,7 +113,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             
             log(f"[WebSocket] Calling enhance_prompt_async with task: {data.get('task', '')[:50]}")
             
-            result = await enhance_prompt_async(
+            result, is_fallback = await enhance_prompt_async(
                 task=data.get('task', ''),
                 lazy_prompt=data.get('lazy_prompt', ''),
                 model=os.getenv("MODEL", "gemini-3-flash-preview"),
@@ -127,7 +127,8 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             
             await self.send(text_data=json.dumps({
                 'type': 'task_complete',
-                'result': result
+                'result': result,
+                'is_fallback': is_fallback
             }))
             log("[WebSocket] Sent task_complete to client")
             

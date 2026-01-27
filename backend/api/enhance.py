@@ -14,6 +14,8 @@ from . import log
 
 load_dotenv()
 
+FALLBACK_MODEL = "gpt-5-mini"
+
 def get_client():
     api_key = os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY") or ""
     base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("BASE_URL") or "https://api.openai.com/v1"
@@ -79,6 +81,12 @@ def parse_llm_response(response: str) -> None:
         log("[DEBUG] No <improved-prompt> tag found in LLM response.")
         return None
 
+def check_hcai_status() -> bool:
+    res = httpx.get("https://ai.hackclub.com/up").json()
+    return res.get("status", "down") == "up"
+print("HCAI status:", end=" ")
+print(check_hcai_status())
+
 async def enhance_prompt_async(
     task: str,
     lazy_prompt: str,
@@ -90,6 +98,13 @@ async def enhance_prompt_async(
     falling_back: bool = False
 ) -> str:
     """Async version of enhance_prompt that runs in the WebSocket consumer."""
+    if not check_hcai_status() and not falling_back:
+        log("HCAI service is down, falling back to alternative model...")
+        return await enhance_prompt_async(
+            task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
+            additional_context_query, ask_user_func, falling_back=True
+        ), True
+
     client = get_async_client(fallback=falling_back)
 
     additional_context = ""
@@ -201,11 +216,14 @@ async def enhance_prompt_async(
         
         result = parse_llm_response(result)
         
-        return result
+        return result, False
     except openai.APIStatusError as e:
         log(f"APIStatusError: {e}")
         log("Falling back to alternative model...")
-        return await enhance_prompt_async(
-            task, lazy_prompt, "gpt-5.1", use_web_search, 
-            additional_context_query, ask_user_func, falling_back=True
-        )
+        if os.getenv("FALLBACK_API_KEY"):
+            return await enhance_prompt_async(
+                task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
+                additional_context_query, ask_user_func, falling_back=True
+            ), True
+        else:
+            raise Exception("We are out of money! Please try again later.") from e

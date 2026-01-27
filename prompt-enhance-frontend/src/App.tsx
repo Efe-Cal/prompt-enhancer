@@ -100,6 +100,7 @@ function App() {
         setEnhancedPrompt(data.result)
         saveToLocalStorage(task, prompt, data.result)
         setIsLoading(false)
+        setErrorMessage(data.is_fallback ? "Using fallback model due to HCAI service downtime." : null)
         websocket.close()
       } else if (data.type === 'task_error') {
         console.error('Task error:', data.error)
