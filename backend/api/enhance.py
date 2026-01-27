@@ -84,8 +84,6 @@ def parse_llm_response(response: str) -> None:
 def check_hcai_status() -> bool:
     res = httpx.get("https://ai.hackclub.com/up").json()
     return res.get("status", "down") == "up"
-print("HCAI status:", end=" ")
-print(check_hcai_status())
 
 async def enhance_prompt_async(
     task: str,
@@ -100,11 +98,14 @@ async def enhance_prompt_async(
     """Async version of enhance_prompt that runs in the WebSocket consumer."""
     if not check_hcai_status() and not falling_back:
         log("HCAI service is down, falling back to alternative model...")
-        return await enhance_prompt_async(
-            task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
-            additional_context_query, ask_user_func, falling_back=True
-        ), True
-
+        if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "":
+            return await enhance_prompt_async(
+                task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
+                additional_context_query, ask_user_func, falling_back=True
+            ), True
+        else:
+            raise Exception("We are out of money! Please try again later.")    
+    
     client = get_async_client(fallback=falling_back)
 
     additional_context = ""
@@ -220,7 +221,7 @@ async def enhance_prompt_async(
     except openai.APIStatusError as e:
         log(f"APIStatusError: {e}")
         log("Falling back to alternative model...")
-        if os.getenv("FALLBACK_API_KEY"):
+        if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "" and not falling_back:
             return await enhance_prompt_async(
                 task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
                 additional_context_query, ask_user_func, falling_back=True
