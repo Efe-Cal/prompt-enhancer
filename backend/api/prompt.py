@@ -75,7 +75,9 @@ style_options = {
 
 def _prompt_style_section(prompt_style: dict) -> str:
     """Build the prompt style section of the user prompt."""
-    if (not prompt_style) or prompt_style.values() == ["Any", "Detailed", "Any"]:
+    if (not prompt_style) or (prompt_style.get("formatting") == 'Any' and
+       prompt_style.get("length") == 'Detailed' and
+       prompt_style.get("technique") == 'Any'):
         return ""
     
     prompt_style_str = "<prompt-style>\n"

@@ -102,8 +102,8 @@ async def enhance_prompt_async(
         if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "":
             return await enhance_prompt_async(
                 task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
-                additional_context_query, ask_user_func, falling_back=True,
-                target_model=target_model, prompt_style=prompt_style
+                additional_context_query, target_model, ask_user_func,
+                falling_back=True, prompt_style=prompt_style
             ), True
         else:
             raise Exception("We are out of money! Please try again later.")    
@@ -227,8 +227,8 @@ async def enhance_prompt_async(
         if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "" and not falling_back:
             return await enhance_prompt_async(
                 task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
-                additional_context_query, ask_user_func, falling_back=True,
-                target_model=target_model, prompt_style=prompt_style
+                additional_context_query, target_model, ask_user_func,
+                falling_back=True, prompt_style=prompt_style
             ), True
         else:
             raise Exception("We are out of money! Please try again later.") from e

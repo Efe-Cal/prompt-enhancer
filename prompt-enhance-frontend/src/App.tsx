@@ -28,7 +28,7 @@ function App() {
 
   // Prompt style options
   const [promptStyleOpen, setPromptStyleOpen] = useState(false)
-  const [promptFormatting, setPromptFormatting] = useState<'Any' | 'Markdown' | 'XML'>('Markdown')
+  const [promptFormatting, setPromptFormatting] = useState<'Any' | 'Markdown' | 'XML'>('Any')
   const [promptLength, setPromptLength] = useState<'Concise' | 'Detailed' | 'Comprehensive'>('Detailed')
   const [promptTechnique, setPromptTechnique] = useState<'Any' | 'Zero-Shot' | 'Few-Shot'>('Any')
 
