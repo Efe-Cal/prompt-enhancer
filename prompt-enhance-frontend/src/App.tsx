@@ -28,9 +28,9 @@ function App() {
 
   // Prompt style options
   const [promptStyleOpen, setPromptStyleOpen] = useState(false)
-  const [promptFormatting, setPromptFormatting] = useState<'Any' | 'Markdown' | 'XML'>('Any')
+  const [promptFormatting, setPromptFormatting] = useState<'Any' | 'Markdown' | 'XML' |'Plain Text'>('Any')
   const [promptLength, setPromptLength] = useState<'Concise' | 'Detailed' | 'Comprehensive'>('Detailed')
-  const [promptTechnique, setPromptTechnique] = useState<'Any' | 'Zero-Shot' | 'Few-Shot'>('Any')
+  const [promptTechnique, setPromptTechnique] = useState<'Any' | 'Zero-Shot' | 'Few-Shot' | 'Chain-of-Thought'>('Any')
 
   useEffect(() => {
     handleRefresh()
@@ -358,6 +358,12 @@ function App() {
                   >
                     XML
                   </button>
+                  <button
+                    className={`toggle-btn ${promptFormatting === 'Plain Text' ? 'active' : ''}`}
+                    onClick={() => setPromptFormatting('Plain Text')}
+                  >
+                    Plain Text
+                  </button>
                 </div>
               </div>
               <div className="style-option">
@@ -403,6 +409,12 @@ function App() {
                     onClick={() => setPromptTechnique('Few-Shot')}
                   >
                     Few-shot
+                  </button>
+                  <button
+                    className={`toggle-btn ${promptTechnique === 'Chain-of-Thought' ? 'active' : ''}`}
+                    onClick={() => setPromptTechnique('Chain-of-Thought')}
+                  >
+                    Chain-of-Thought
                   </button>
                 </div>
               </div>
