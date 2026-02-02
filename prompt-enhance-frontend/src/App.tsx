@@ -26,6 +26,12 @@ function App() {
   const [userAnswers, setUserAnswers] = useState<string[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  // Prompt style options
+  const [promptStyleOpen, setPromptStyleOpen] = useState(false)
+  const [promptFormatting, setPromptFormatting] = useState<'Any' | 'Markdown' | 'XML'>('Any')
+  const [promptLength, setPromptLength] = useState<'Concise' | 'Detailed' | 'Comprehensive'>('Detailed')
+  const [promptTechnique, setPromptTechnique] = useState<'Any' | 'Zero-Shot' | 'Few-Shot'>('Any')
+
   useEffect(() => {
     handleRefresh()
   }, [])
@@ -80,6 +86,11 @@ function App() {
         use_web_search: useWebSearch,
         additional_context_query: searchQuery,
         target_model: targetModel,
+        prompt_style: {
+          formatting: promptFormatting,
+          length: promptLength,
+          technique: promptTechnique
+        }
       }))
       console.log('Enhance request sent via WebSocket')
     }
@@ -273,7 +284,7 @@ function App() {
         <p className="main-subtitle">Transform your ideas into powerful prompts</p>
 
         <div className="form-section">
-          <label className="form-label">Task / Topic</label>
+          <label className="form-label">Task / Goal</label>
           <input
             type="text"
             className="form-input"
@@ -313,6 +324,90 @@ function App() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+        </div>
+
+        {/* Collapsible Prompt Style Section */}
+        <div className="prompt-style-section">
+          <button
+            className="prompt-style-header"
+            onClick={() => setPromptStyleOpen(!promptStyleOpen)}
+          >
+            <span>Prompt Style</span>
+            <span className={`chevron ${promptStyleOpen ? 'open' : ''}`}>▼</span>
+          </button>
+          {promptStyleOpen && (
+            <div className="prompt-style-content">
+              <div className="style-option">
+                <label className="style-label">Formatting</label>
+                <div className="toggle-group">
+                  <button
+                    className={`toggle-btn ${promptFormatting === 'Any' ? 'active' : ''}`}
+                    onClick={() => setPromptFormatting('Any')}
+                  >
+                    Any
+                  </button>
+                  <button
+                    className={`toggle-btn ${promptFormatting === 'Markdown' ? 'active' : ''}`}
+                    onClick={() => setPromptFormatting('Markdown')}
+                  >
+                    Markdown
+                  </button>
+                  <button
+                    className={`toggle-btn ${promptFormatting === 'XML' ? 'active' : ''}`}
+                    onClick={() => setPromptFormatting('XML')}
+                  >
+                    XML
+                  </button>
+                </div>
+              </div>
+              <div className="style-option">
+                <label className="style-label">Length</label>
+                <div className="toggle-group">
+                  <button
+                    className={`toggle-btn ${promptLength === 'Concise' ? 'active' : ''}`}
+                    onClick={() => setPromptLength('Concise')}
+                  >
+                    Concise
+                  </button>
+                  <button
+                    className={`toggle-btn ${promptLength === 'Detailed' ? 'active' : ''}`}
+                    onClick={() => setPromptLength('Detailed')}
+                  >
+                    Detailed
+                  </button>
+                  <button
+                    className={`toggle-btn ${promptLength === 'Comprehensive' ? 'active' : ''}`}
+                    onClick={() => setPromptLength('Comprehensive')}
+                  >
+                    Comprehensive
+                  </button>
+                </div>
+              </div>
+              <div className="style-option">
+                <label className="style-label">Technique</label>
+                <div className="toggle-group">
+                  <button
+                    className={`toggle-btn ${promptTechnique === 'Any' ? 'active' : ''}`}
+                    onClick={() => setPromptTechnique('Any')}
+                  >
+                    Any
+                  </button>
+                  <button
+                    className={`toggle-btn ${promptTechnique === 'Zero-Shot' ? 'active' : ''}`}
+                    onClick={() => setPromptTechnique('Zero-Shot')}
+                  >
+                    Zero-shot
+                  </button>
+                  <button
+                    className={`toggle-btn ${promptTechnique === 'Few-Shot' ? 'active' : ''}`}
+                    onClick={() => setPromptTechnique('Few-Shot')}
+                  >
+                    Few-shot
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {errorMessage && (
