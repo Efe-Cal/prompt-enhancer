@@ -35,6 +35,7 @@ def _input_components_section(additional_context: str) -> str:
     return f"""<input-components>
 - A "task" that describes the high-level goal of the prompt.
 - A "raw input" that you should expect to be vague, ambiguous, or incomplete. DO NOT question the validity of the information in the raw input; assume it is true.
+- Optionally, a specific prompting style (length, formatting, technique) to follow.
 {additional_context_desc}</input-components>"""
 
 
@@ -66,8 +67,37 @@ def _workflow_section(use_web_search: bool) -> str:
     
     return "<workflow>\n"+"\n".join(f"{i}. {step}" for i, step in enumerate(workflow, start=1)) + "\n</workflow>"
 
+style_options = {
+    "length": {"Concise": "Short and to the point - **NO fluff**.", "Comprehensive": "Comprehensive and very detailed - **INCLUDE all relevant details**."},
+    "formatting": {"Markdown": "Use Markdown formatting with headings, bullet points, and code blocks where appropriate.", "XML": "Use XML tags to structure the prompt clearly. Use **STRICT XML format**. Make sure to **NOT OVERDO** it."},
+    "technique": {"Zero-Shot": "Zero-Shot - A straightforward prompt without examples.", "Few-Shot": "Few-Shot - Include a few examples to guide the model.", "Chain-of-Thought": "Encourage step-by-step reasoning."}
+}
 
-def build_prompts(task: str, lazy_prompt: str, use_web_search: bool, additional_context: str, target_model: str) -> dict[str, str]:
+def _prompt_style_section(prompt_style: dict) -> str:
+    """Build the prompt style section of the user prompt."""
+    if (not prompt_style) or prompt_style.values() == ["Any", "Detailed", "Any"]:
+        return ""
+    
+    prompt_style_str = "<prompt-style>\n"
+    
+    if prompt_style.get("formatting") and prompt_style['formatting'] != 'Any':
+        formatting_desc = style_options['formatting'].get(prompt_style['formatting']) 
+        prompt_style_str += f"- Formatting: {formatting_desc}\n"
+         
+
+    if prompt_style.get("length") and prompt_style['length'] != 'Detailed':
+        length_desc = style_options['length'].get(prompt_style['length'])
+        prompt_style_str += f"- Length: {length_desc}\n"
+    
+    
+    if prompt_style.get("technique") and prompt_style['technique'] != 'Any':
+        technique_desc = style_options['technique'].get(prompt_style['technique'])
+        prompt_style_str += f"- Prompting Technique: {technique_desc}\n"
+    
+    prompt_style_str += "\n</prompt-style>"
+    return prompt_style_str
+
+def build_prompts(task: str, lazy_prompt: str, use_web_search: bool, additional_context: str, target_model: str, prompt_style:dict) -> dict[str, str]:
     """Build system and user prompts for the prompt enhancement process."""
 
     SYSTEM_PROMPT = f"""<identity-and-role>
@@ -131,6 +161,8 @@ Here you provide the optimized, ready-to-use prompt text:
 {target_model_desc}
 - Current Date: {datetime.now().strftime("%B %d, %Y")}
 </context-info>
+
+{_prompt_style_section(prompt_style)}
 
 <instructions>
 Analyze the raw input above, determine the necessary improvements. If you need more information, CALL `get_user_input`.

@@ -93,7 +93,8 @@ async def enhance_prompt_async(
     additional_context_query: Optional[str] = None,
     target_model: str = "gpt-5.1",
     ask_user_func: Optional[Callable[[str], Awaitable[str]]] = None,
-    falling_back: bool = False
+    falling_back: bool = False,
+    prompt_style: dict | None = None
 ) -> str:
     """Async version of enhance_prompt that runs in the WebSocket consumer."""
     if not check_hcai_status() and not falling_back:
@@ -101,7 +102,8 @@ async def enhance_prompt_async(
         if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "":
             return await enhance_prompt_async(
                 task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
-                additional_context_query, ask_user_func, falling_back=True
+                additional_context_query, ask_user_func, falling_back=True,
+                target_model=target_model, prompt_style=prompt_style
             ), True
         else:
             raise Exception("We are out of money! Please try again later.")    
@@ -117,7 +119,8 @@ async def enhance_prompt_async(
             lazy_prompt=lazy_prompt,
             use_web_search=use_web_search,
             additional_context=additional_context,
-            target_model=target_model
+            target_model=target_model,
+            prompt_style=prompt_style
         ).values()
 
     messages = [
@@ -224,7 +227,8 @@ async def enhance_prompt_async(
         if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "" and not falling_back:
             return await enhance_prompt_async(
                 task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
-                additional_context_query, ask_user_func, falling_back=True
+                additional_context_query, ask_user_func, falling_back=True,
+                target_model=target_model, prompt_style=prompt_style
             ), True
         else:
             raise Exception("We are out of money! Please try again later.") from e

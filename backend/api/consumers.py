@@ -120,7 +120,8 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 use_web_search=data.get('use_web_search', True),
                 additional_context_query=data.get('additional_context_query', ''),
                 ask_user_func=self.ask_user_question,
-                target_model=data.get('target_model', 'gpt-5.1')
+                target_model=data.get('target_model', 'gpt-5.1'),
+                prompt_style=data.get('prompt_style', {})
             )
             
             log(f"[WebSocket] Enhancement complete, result length: {len(result)}")
