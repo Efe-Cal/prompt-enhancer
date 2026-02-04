@@ -36,7 +36,7 @@ def _input_components_section(additional_context: str) -> str:
 - A "task" that describes the high-level goal of the prompt.
 - A "raw input" that you should expect to be vague, ambiguous, or incomplete. DO NOT question the validity of the information in the raw input; assume it is true.
 - Optionally, a target model to optimize the prompt for (e.g., GPT-5.1, Claude 4.5, etc.).
-- Optionally, a specific prompting style (length, formatting, technique) to follow.
+- Optionally, a specific prompting style (length, formatting, technique) to follow. If provided, you MUST follow it; it takes precedence over all other instructions.
 {additional_context_desc}</input-components>"""
 
 
@@ -81,7 +81,7 @@ def _prompt_style_section(prompt_style: dict) -> str:
        prompt_style.get("technique") == 'Any'):
         return ""
     
-    prompt_style_str = "<prompt-style>\n"
+    prompt_style_str = "<prompt-style>\nYou MUST follow these style preferences:\n"
     
     if prompt_style.get("formatting") and prompt_style['formatting'] != 'Any':
         formatting_desc = style_options['formatting'].get(prompt_style['formatting']) 
@@ -100,7 +100,7 @@ def _prompt_style_section(prompt_style: dict) -> str:
     prompt_style_str += "</prompt-style>"
     return prompt_style_str
 
-def build_prompts(task: str, lazy_prompt: str, use_web_search: bool, additional_context: str, target_model: str, prompt_style:dict) -> dict[str, str]:
+def build_prompts(task: str, lazy_prompt: str, use_web_search: bool, additional_context: str, target_model: str, prompt_style:dict, is_reasoning_native: bool = False) -> dict[str, str]:
     """Build system and user prompts for the prompt enhancement process."""
 
     SYSTEM_PROMPT = f"""# Role
@@ -121,7 +121,7 @@ Apply the following framework to every improvement:
 3. Clarity: Remove ambiguity; replace vague verbs with precise commands.
 4. Specificity: Be specific, descriptive and as detailed as possible about the desired outcome.
 5. Constraints: If necessary, add output format constraints (length, style, format).
-6. Chain of Thought (ONLY IF the target model is NOT reasoning-native): Encourage the model to "think step-by-step" if the task is complex.
+6. Chain of Thought: {"SKIP this step - the target model has native reasoning capabilities and does NOT need explicit CoT prompting." if is_reasoning_native else "Encourage the model to 'think step-by-step' if the task is complex."}
 
 {_workflow_section(use_web_search)}
 

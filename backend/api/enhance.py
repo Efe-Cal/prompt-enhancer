@@ -94,7 +94,8 @@ async def enhance_prompt_async(
     target_model: str = "gpt-5.1",
     ask_user_func: Optional[Callable[[str], Awaitable[str]]] = None,
     falling_back: bool = False,
-    prompt_style: dict | None = None
+    prompt_style: dict | None = None,
+    is_reasoning_native: bool = False
 ) -> str:
     """Async version of enhance_prompt that runs in the WebSocket consumer."""
     if not check_hcai_status() and not falling_back:
@@ -103,7 +104,8 @@ async def enhance_prompt_async(
             return await enhance_prompt_async(
                 task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
                 additional_context_query, target_model, ask_user_func,
-                falling_back=True, prompt_style=prompt_style
+                falling_back=True, prompt_style=prompt_style,
+                is_reasoning_native=is_reasoning_native
             ), True
         else:
             raise Exception("We are out of money! Please try again later.")    
@@ -120,7 +122,8 @@ async def enhance_prompt_async(
             use_web_search=use_web_search,
             additional_context=additional_context,
             target_model=target_model,
-            prompt_style=prompt_style
+            prompt_style=prompt_style,
+            is_reasoning_native=is_reasoning_native
         ).values()
 
     messages = [
@@ -228,7 +231,8 @@ async def enhance_prompt_async(
             return await enhance_prompt_async(
                 task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
                 additional_context_query, target_model, ask_user_func,
-                falling_back=True, prompt_style=prompt_style
+                falling_back=True, prompt_style=prompt_style,
+                is_reasoning_native=is_reasoning_native
             ), True
         else:
             raise Exception("We are out of money! Please try again later.") from e

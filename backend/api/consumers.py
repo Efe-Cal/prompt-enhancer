@@ -121,6 +121,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 additional_context_query=data.get('additional_context_query', ''),
                 ask_user_func=self.ask_user_question,
                 target_model=data.get('target_model', 'gpt-5.1'),
+                is_reasoning_native=data.get('is_reasoning_native', False),
                 prompt_style=data.get('prompt_style', {})
             )
             

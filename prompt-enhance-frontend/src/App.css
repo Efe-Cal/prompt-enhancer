@@ -546,7 +546,7 @@
   color: #5d4a35;
   transition: all 0.2s;
   outline: none;
-  min-width: 250px;
+  min-width: 200px;
 }
 
 .model-input:hover {
@@ -558,4 +558,37 @@
   border-color: #b8956c;
   box-shadow: 0 0 0 2px rgba(184, 149, 108, 0.2);
   background-color: #fff;
+}
+
+/* Reasoning Native Checkbox */
+.reasoning-native-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #5d4a35;
+  cursor: pointer;
+  margin-left: 12px;
+  padding: 8px 12px;
+  background-color: rgba(232, 220, 200, 0.5);
+  border-radius: 6px;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.reasoning-native-label:hover {
+  background-color: rgba(232, 220, 200, 0.8);
+}
+
+.reasoning-native-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #b8956c;
+  cursor: pointer;
+}
+
+.reasoning-native-label .info-icon {
+  font-size: 12px;
+  color: #888;
+  cursor: help;
 }

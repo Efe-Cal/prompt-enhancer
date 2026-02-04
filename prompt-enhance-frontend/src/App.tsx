@@ -38,6 +38,7 @@ function App() {
 
   const [models, setModels] = useState<string[]>([])
   const [targetModel, setTargetModel] = useState<string>('')
+  const [isReasoningNative, setIsReasoningNative] = useState<boolean>(false)
 
   const formatModelName = (name: string) => {
     // take the part after "/"
@@ -86,6 +87,7 @@ function App() {
         use_web_search: useWebSearch,
         additional_context_query: searchQuery,
         target_model: targetModel,
+        is_reasoning_native: isReasoningNative,
         prompt_style: {
           formatting: promptFormatting,
           length: promptLength,
@@ -440,13 +442,22 @@ function App() {
               value={targetModel}
               onChange={(e) => setTargetModel(e.target.value)}
               className="form-input model-input"
-              placeholder="Target Model (e.g. gpt-5-mini)"
+              placeholder="Target Model (e.g. gpt-5)"
             />
             <datalist id="models-list">
               {models.map(model => (
                 <option key={model} value={model} />
               ))}
             </datalist>
+            <label className="reasoning-native-label">
+              <input
+                type="checkbox"
+                checked={isReasoningNative}
+                onChange={(e) => setIsReasoningNative(e.target.checked)}
+              />
+              <span>Reasoning Native</span>
+              <span className="info-icon" title="Enable if the target model has native reasoning capabilities (e.g., o1, o3, Gemini-2.5-Flash-Thinking). This skips Chain-of-Thought prompting.">ⓘ</span>
+            </label>
           </div>
         </div>
       </main>
