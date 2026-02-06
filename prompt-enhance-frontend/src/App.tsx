@@ -25,6 +25,8 @@ function App() {
   const [userQuestions, setUserQuestions] = useState<Array<string> | null>(null)
   const [userAnswers, setUserAnswers] = useState<string[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [originalEnhancedPrompt, setOriginalEnhancedPrompt] = useState('')
+  const [copySuccess, setCopySuccess] = useState(false)
 
   // Prompt style options
   const [promptStyleOpen, setPromptStyleOpen] = useState(false)
@@ -114,6 +116,7 @@ function App() {
         // Task finished, display result
         console.log('Task complete, result length:', data.result?.length)
         setEnhancedPrompt(data.result)
+        setOriginalEnhancedPrompt(data.result)
         saveToLocalStorage(task, prompt, data.result)
         setIsLoading(false)
         setErrorMessage(data.is_fallback ? "Using fallback model due to HCAI service downtime." : null)
@@ -182,9 +185,35 @@ function App() {
       setTask(entry.task)
       setPrompt(entry.lazy_prompt)
       setEnhancedPrompt(entry.enhanced_prompt)
+      setOriginalEnhancedPrompt(entry.enhanced_prompt)
       setSelectedEntry(String(id))
     }
   }
+
+  const handleCopyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(enhancedPrompt)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const handleSaveChanges = () => {
+    if (!selectedEntry) return
+    const id = parseInt(selectedEntry)
+    const updatedEntries = savedEntries?.map(entry => 
+      entry.id === id 
+        ? { ...entry, enhanced_prompt: enhancedPrompt }
+        : entry
+    ) || []
+    setSavedEntries(updatedEntries)
+    localStorage.setItem('saved_prompts', JSON.stringify(updatedEntries))
+    setOriginalEnhancedPrompt(enhancedPrompt)
+  }
+
+  const isEnhancedPromptModified = enhancedPrompt !== originalEnhancedPrompt && enhancedPrompt !== ''
 
   const handleDelete = (id: number, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -493,16 +522,48 @@ function App() {
       {/* Right Panel - Enhanced Prompt */}
       <aside className="enhanced-panel">
         <h2 className="enhanced-title">Enhanced Prompt</h2>
-        <pre className="enhanced-output">
-          {isLoading ? (
-            <div className="spinner-container">
-              <div className="spinner"></div>
-              <span>Enhancing your prompt...</span>
+        <div className="enhanced-output-container">
+          {enhancedPrompt && !isLoading && (
+            <div className="enhanced-output-actions">
+              <button 
+                className="action-btn copy-btn" 
+                onClick={handleCopyToClipboard}
+                title="Copy to clipboard"
+              >
+                {copySuccess ? '✓ Copied' : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M18.327 7.286h-8.044a1.932 1.932 0 0 0-1.925 1.938v10.088c0 1.07.862 1.938 1.925 1.938h8.044a1.932 1.932 0 0 0 1.925-1.938V9.224c0-1.07-.862-1.938-1.925-1.938"/><path d="M15.642 7.286V4.688c0-.514-.203-1.007-.564-1.37a1.918 1.918 0 0 0-1.361-.568H5.673c-.51 0-1 .204-1.36.568a1.945 1.945 0 0 0-.565 1.37v10.088c0 .514.203 1.007.564 1.37c.361.364.85.568 1.361.568h2.685"/></g></svg>}
+              </button>
+              {isEnhancedPromptModified && selectedEntry && (
+                <button 
+                  className="action-btn save-btn" 
+                  onClick={handleSaveChanges}
+                  title="Save changes"
+                >
+                  {/* Save icon (floppy disk) */}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M21.25 9.16v7.987a4.1 4.1 0 0 1-1.204 2.901a4.113 4.113 0 0 1-2.906 1.202H6.86a4.113 4.113 0 0 1-2.906-1.202a4.1 4.1 0 0 1-1.204-2.901V6.853a4.1 4.1 0 0 1 1.204-2.901A4.113 4.113 0 0 1 6.86 2.75h8.35a3.004 3.004 0 0 1 2.25.998l3 3.415c.501.545.783 1.256.79 1.997"/><path d="M7 21.22v-5.241a1.995 1.995 0 0 1 2-1.997h6a2.002 2.002 0 0 1 2 1.997v5.241M15.8 2.81v4.183a1.526 1.526 0 0 1-1.52 1.528H9.72A1.531 1.531 0 0 1 8.2 6.993V2.75m1.946 15.108h3.708"/></g></svg>
+                </button>
+              )}
             </div>
-          ) : (
-            <code>{enhancedPrompt || 'Your enhanced prompt will appear here.'}</code>
           )}
-        </pre>
+          {isLoading ? (
+            <pre className="enhanced-output">
+              <div className="spinner-container">
+                <div className="spinner"></div>
+                <span>Enhancing your prompt...</span>
+              </div>
+            </pre>
+          ) : 
+            enhancedPrompt ? (
+            <textarea
+              className="enhanced-output enhanced-output-editable"
+              value={enhancedPrompt}
+              onChange={(e) => setEnhancedPrompt(e.target.value)}
+            />
+          ) : (
+            <pre className="enhanced-output">
+              Your enhanced prompt will appear here.
+            </pre>
+          )}
+        </div>
       </aside>
       <Analytics />
     </div>

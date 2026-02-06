@@ -403,6 +403,69 @@
   background-color: rgba(139, 111, 78, 0.5);
 }
 
+.enhanced-output-editable {
+  resize: none;
+  border: none;
+  outline: none;
+  width: 100%;
+  min-width: 30vw;
+  height: 60vh;
+  cursor: text;
+  box-sizing: border-box;
+}
+
+.enhanced-output-editable:focus {
+  outline: none;
+}
+
+/* Enhanced Output Container and Action Buttons */
+.enhanced-output-container {
+  position: relative;
+}
+
+.enhanced-output-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.copy-btn {
+  background-color: rgba(139, 111, 78, 0.8);
+  color: white;
+}
+
+.copy-btn:hover {
+  background-color: rgba(139, 111, 78, 1);
+  transform: translateY(-1px);
+}
+
+.save-btn {
+  background-color: rgba(139, 111, 78, 0.8);
+  color: white;
+}
+
+.save-btn:hover {
+  background-color: rgba(139, 111, 78, 1);
+  transform: translateY(-1px);
+}
+
 /* Loading Spinner */
 .spinner-container {
   display: flex;
