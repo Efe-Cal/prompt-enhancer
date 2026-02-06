@@ -101,12 +101,13 @@ async def enhance_prompt_async(
     if not check_hcai_status() and not falling_back:
         log("HCAI service is down, falling back to alternative model...")
         if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "":
-            return await enhance_prompt_async(
+            result, _ = await enhance_prompt_async(
                 task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
                 additional_context_query, target_model, ask_user_func,
                 falling_back=True, prompt_style=prompt_style,
                 is_reasoning_native=is_reasoning_native
-            ), True
+            )
+            return result, True
         else:
             raise Exception("We are out of money! Please try again later.")    
     
@@ -228,11 +229,12 @@ async def enhance_prompt_async(
         log(f"APIStatusError: {e}")
         log("Falling back to alternative model...")
         if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "" and not falling_back:
-            return await enhance_prompt_async(
+            result, _ = await enhance_prompt_async(
                 task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
                 additional_context_query, target_model, ask_user_func,
                 falling_back=True, prompt_style=prompt_style,
                 is_reasoning_native=is_reasoning_native
-            ), True
+            )
+            return result, True
         else:
             raise Exception("We are out of money! Please try again later.") from e
