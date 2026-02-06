@@ -592,3 +592,531 @@
   color: #888;
   cursor: help;
 }
+
+/* ========================================
+   MOBILE RESPONSIVE STYLES
+   ======================================== */
+
+/* Mobile Header - Hidden on desktop */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background-color: #e8dcc8;
+  padding: 0 16px;
+  align-items: center;
+  gap: 16px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #4a3728;
+  margin: 0;
+}
+
+/* Hamburger Button */
+.hamburger-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.hamburger-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.hamburger-icon {
+  position: relative;
+  width: 22px;
+  height: 2px;
+  background-color: #4a3728;
+  transition: all 0.3s ease;
+}
+
+.hamburger-icon::before,
+.hamburger-icon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 22px;
+  height: 2px;
+  background-color: #4a3728;
+  transition: all 0.3s ease;
+}
+
+.hamburger-icon::before {
+  top: -7px;
+}
+
+.hamburger-icon::after {
+  top: 7px;
+}
+
+.hamburger-icon.open {
+  background-color: transparent;
+}
+
+.hamburger-icon.open::before {
+  transform: rotate(45deg);
+  top: 0;
+}
+
+.hamburger-icon.open::after {
+  transform: rotate(-45deg);
+  top: 0;
+}
+
+/* Mobile Overlay */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 150;
+  backdrop-filter: blur(2px);
+}
+
+/* Sidebar Close Button - Hidden on desktop */
+.sidebar-close-btn {
+  display: none;
+  width: 100%;
+  padding: 12px;
+  background-color: #c49a6c;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  cursor: pointer;
+  margin-top: auto;
+  transition: background-color 0.2s;
+}
+
+.sidebar-close-btn:hover {
+  background-color: #b08858;
+}
+
+/* ========================================
+   TABLET BREAKPOINT (max-width: 1024px)
+   ======================================== */
+@media (max-width: 1024px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .main-content {
+    padding: 24px;
+    max-width: 100%;
+  }
+
+  .enhanced-panel {
+    max-width: 100%;
+    padding: 24px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .prompt-style-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .toggle-group {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .toggle-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+/* ========================================
+   MOBILE BREAKPOINT (max-width: 768px)
+   ======================================== */
+@media (max-width: 768px) {
+  /* Show mobile header */
+  .mobile-header {
+    display: flex;
+  }
+
+  /* Show mobile overlay when sidebar is open */
+  .mobile-overlay {
+    display: block;
+  }
+
+  /* Main container adjustments */
+  .app-container {
+    flex-direction: column;
+    padding-top: 56px; /* Height of mobile header */
+  }
+
+  /* Sidebar as slide-in drawer */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 85%;
+    max-width: 320px;
+    height: 100vh;
+    max-height: none;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
+    border-right: none;
+    padding-top: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-close-btn {
+    display: block;
+  }
+
+  /* Hide desktop title, use mobile title instead */
+  .main-title {
+    display: none;
+  }
+
+  .main-subtitle {
+    margin-bottom: 24px;
+  }
+
+  /* Main content full width */
+  .main-content {
+    padding: 20px 16px;
+    max-width: 100%;
+  }
+
+  /* Enhanced panel full width */
+  .enhanced-panel {
+    max-width: 100%;
+    padding: 20px 16px;
+  }
+
+  /* Form inputs */
+  .form-input {
+    padding: 14px 16px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  .form-textarea {
+    min-height: 140px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  /* Toggle buttons */
+  .toggle-group {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .toggle-btn {
+    padding: 10px 14px;
+    font-size: 13px;
+    flex: 1;
+    min-width: fit-content;
+  }
+
+  /* Actions section */
+  .actions-section {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .enhance-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+  }
+
+  .model-selector {
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .model-input {
+    width: 100%;
+    min-width: 100%;
+    font-size: 16px;
+  }
+
+  .reasoning-native-label {
+    margin-left: 0;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Enhanced output */
+  .enhanced-output {
+    font-size: 12px;
+    max-height: 60vh;
+  }
+
+  /* Dialog */
+  .dialog-box {
+    width: 95%;
+    max-width: none;
+    padding: 24px 20px;
+    margin: 16px;
+  }
+
+  .dialog-box h3 {
+    font-size: 18px;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .dialog-btn {
+    width: 100%;
+    padding: 14px;
+  }
+
+  /* Saved items - larger touch targets */
+  .saved-item-main {
+    padding: 14px;
+  }
+
+  .saved-item-delete {
+    opacity: 1; /* Always visible on mobile for easier access */
+    padding: 14px;
+  }
+
+  /* Checkbox touch targets */
+  .checkbox-label {
+    padding: 8px 0;
+    gap: 12px;
+    font-size: 15px;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Prompt style header */
+  .prompt-style-header {
+    padding: 14px 16px;
+    font-size: 15px;
+  }
+
+  .style-option {
+    width: 100%;
+  }
+
+  /* Error message */
+  .error-message {
+    font-size: 14px;
+  }
+}
+
+/* ========================================
+   SMALL MOBILE BREAKPOINT (max-width: 480px)
+   ======================================== */
+@media (max-width: 480px) {
+  .main-content {
+    padding: 16px 12px;
+  }
+
+  .enhanced-panel {
+    padding: 16px 12px;
+  }
+
+  .form-label {
+    font-size: 15px;
+  }
+
+  .form-input,
+  .form-textarea {
+    padding: 12px 14px;
+  }
+
+  .toggle-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .main-subtitle {
+    font-size: 13px;
+  }
+
+  .enhanced-title {
+    font-size: 18px;
+  }
+
+  .enhanced-output {
+    padding: 14px;
+    font-size: 11px;
+  }
+
+  .sidebar {
+    width: 90%;
+  }
+
+  .saved-item-title {
+    font-size: 13px;
+  }
+
+  .saved-item-date {
+    font-size: 10px;
+  }
+
+  /* Spinner container */
+  .spinner-container {
+    padding: 40px 16px;
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ========================================
+   LANDSCAPE PHONE OPTIMIZATIONS
+   ======================================== */
+@media (max-width: 768px) and (orientation: landscape) {
+  .app-container {
+    padding-top: 48px;
+  }
+
+  .mobile-header {
+    height: 48px;
+  }
+
+  .main-content {
+    padding: 16px;
+  }
+
+  .enhanced-panel {
+    padding: 16px;
+  }
+
+  .form-textarea {
+    min-height: 100px;
+  }
+
+  .enhanced-output {
+    max-height: 40vh;
+  }
+
+  .dialog-box {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* ========================================
+   TOUCH-FRIENDLY ENHANCEMENTS
+   ======================================== */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets for touch devices */
+  .saved-item-delete {
+    opacity: 1;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .toggle-btn {
+    min-height: 44px;
+  }
+
+  .enhance-btn {
+    min-height: 48px;
+  }
+
+  .dialog-btn {
+    min-height: 48px;
+  }
+
+  .checkbox-label {
+    min-height: 44px;
+  }
+
+  .hamburger-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Remove hover effects that don't work well on touch */
+  .saved-item:hover .saved-item-delete {
+    opacity: 1;
+  }
+
+  .toggle-btn:hover {
+    color: inherit;
+  }
+
+  .toggle-btn:active {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+
+  .enhance-btn:active {
+    background-color: #9a7850;
+  }
+
+  .saved-item:active {
+    background-color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+/* ========================================
+   SAFE AREA INSETS (for notched phones)
+   ======================================== */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .mobile-header {
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+
+    .main-content {
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+
+    .enhanced-panel {
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+
+    .sidebar {
+      padding-left: max(24px, env(safe-area-inset-left));
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+  }
+}

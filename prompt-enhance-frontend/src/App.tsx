@@ -32,6 +32,9 @@ function App() {
   const [promptLength, setPromptLength] = useState<'Concise' | 'Detailed' | 'Comprehensive'>('Detailed')
   const [promptTechnique, setPromptTechnique] = useState<'Any' | 'Zero-Shot' | 'Few-Shot' | 'Chain-of-Thought'>('Any')
 
+  // Mobile menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   useEffect(() => {
     handleRefresh()
   }, [])
@@ -246,8 +249,28 @@ function App() {
         </div>
       )}
 
+      {/* Mobile Header */}
+      <header className="mobile-header">
+        <button 
+          className="hamburger-btn"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          <span className={`hamburger-icon ${mobileMenuOpen ? 'open' : ''}`}></span>
+        </button>
+        <h1 className="mobile-title">Prompt Enhance</h1>
+      </header>
+
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="mobile-overlay" 
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar - History */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <h2 className="sidebar-title">History</h2>
         {/* Refresh button removed for auto-refresh */}
 
@@ -277,7 +300,12 @@ function App() {
           </div>
         </div>
 
-
+        <button 
+          className="sidebar-close-btn"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          Close
+        </button>
       </aside>
 
       {/* Main Content */}
