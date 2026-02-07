@@ -11,6 +11,24 @@ from . import log
 
 load_dotenv()
 
+def _check_rate_limit_sync(ip_address):
+        """Check if IP has exceeded rate limit."""
+        cache_key = f"ws_enhance_limit_{ip_address}"
+        count = cache.get(cache_key, 0)
+        
+        limit = getattr(settings, 'WS_RATE_LIMIT', 5)
+        
+        if count >= limit:
+            return False
+            
+        if count == 0:
+            cache.set(cache_key, 1, 60)
+        else:
+            cache.incr(cache_key)
+            
+        return True
+
+
 class EnhanceConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,7 +81,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             elif message_type == 'enhance':
                 # Rate limit check
                 client_ip = self.scope.get('client', ['0.0.0.0'])[0]
-                is_allowed = await sync_to_async(self._check_rate_limit_sync)(client_ip)
+                is_allowed = await sync_to_async(_check_rate_limit_sync)(client_ip)
                 
                 if not is_allowed:
                     log(f"[WebSocket] Rate limit exceeded for IP: {client_ip}")
@@ -180,22 +198,6 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             'error': event['error']
         }))
 
-    def _check_rate_limit_sync(self, ip_address):
-        """Check if IP has exceeded rate limit."""
-        cache_key = f"ws_enhance_limit_{ip_address}"
-        count = cache.get(cache_key, 0)
-        
-        limit = getattr(settings, 'WS_RATE_LIMIT', 5)
-        
-        if count >= limit:
-            return False
-            
-        if count == 0:
-            cache.set(cache_key, 1, 60)
-        else:
-            cache.incr(cache_key)
-            
-        return True
 
 class EditConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
@@ -226,6 +228,19 @@ class EditConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
     async def receive(self, text_data):
+        
+        # Rate limit check
+        client_ip = self.scope.get('client', ['0.0.0.0'])[0]
+        is_allowed = await sync_to_async(_check_rate_limit_sync)(client_ip)
+        
+        if not is_allowed:
+            log(f"[WebSocket] Rate limit exceeded for IP: {client_ip}")
+            await self.send(text_data=json.dumps({
+                'type': 'task_error',
+                'error': 'Rate limit exceeded. Please wait a minute before trying again.'
+            }))
+            return
+        
         log(f"[WebSocket] EditConsumer received message: {text_data[:200]}")
         try:
             text_data_json = json.loads(text_data)
