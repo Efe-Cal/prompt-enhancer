@@ -1157,6 +1157,186 @@
 }
 
 /* ========================================
+   EDIT REQUEST STYLES (DESKTOP)
+   ======================================== */
+.edit-request-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.edit-request-input {
+  flex: 1;
+  padding: 10px 14px;
+  background-color: #e8dcc8;
+  border: 1px solid rgba(184, 149, 108, 0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #333;
+  outline: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.edit-request-input::placeholder {
+  color: #888;
+}
+
+.edit-request-input:focus {
+  border-color: #b8956c;
+  background-color: #f5efe6;
+}
+
+.edit-request-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.edit-request-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background-color: rgba(139, 111, 78, 0.5);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.edit-request-btn.active {
+  background-color: #8b6f4e;
+}
+
+.edit-request-btn:hover:not(:disabled) {
+  background-color: #6d5739;
+}
+
+.edit-request-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Edit spinner */
+.edit-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ========================================
+   MOBILE EDIT BAR STYLES
+   ======================================== */
+.mobile-edit-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-edit-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    background-color: #f5efe6;
+    border-top: 1px solid rgba(184, 149, 108, 0.3);
+    gap: 10px;
+    z-index: 100;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .mobile-edit-input {
+    flex: 1;
+    padding: 12px 14px;
+    background-color: #e8dcc8;
+    border: 1px solid rgba(184, 149, 108, 0.3);
+    border-radius: 8px;
+    font-size: 16px;
+    color: #333;
+    outline: none;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+
+  .mobile-edit-input::placeholder {
+    color: #888;
+  }
+
+  .mobile-edit-input:focus {
+    border-color: #b8956c;
+    background-color: #f5efe6;
+  }
+
+  .mobile-edit-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .mobile-edit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background-color: rgba(139, 111, 78, 0.5);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .mobile-edit-btn.active {
+    background-color: #8b6f4e;
+  }
+
+  .mobile-edit-btn:hover:not(:disabled) {
+    background-color: #6d5739;
+  }
+
+  .mobile-edit-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Hide desktop edit row on mobile */
+  .edit-request-row {
+    display: none;
+  }
+
+  /* Add bottom padding to enhanced-panel to avoid overlap with sticky bar */
+  .enhanced-panel {
+    padding-bottom: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-edit-bar {
+    padding: 10px 12px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .mobile-edit-input {
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  .mobile-edit-btn {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ========================================
    SAFE AREA INSETS (for notched phones)
    ======================================== */
 @supports (padding: max(0px)) {

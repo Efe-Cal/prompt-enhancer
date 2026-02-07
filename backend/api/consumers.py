@@ -84,6 +84,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 self.enhancement_task = asyncio.create_task(
                     self._run_enhancement_with_callback(text_data_json)
                 )
+
         except Exception as e:
             log(f"[WebSocket] Error in receive: {e}")
             traceback.print_exc()
@@ -113,7 +114,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             
             log(f"[WebSocket] Calling enhance_prompt_async with task: {data.get('task', '')[:50]}")
             
-            result, is_fallback = await enhance_prompt_async(
+            result, is_fallback, messages = await enhance_prompt_async(
                 task=data.get('task', ''),
                 lazy_prompt=data.get('lazy_prompt', ''),
                 model=os.getenv("MODEL", "gemini-3-flash-preview"),
@@ -125,7 +126,9 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 prompt_style=data.get('prompt_style', {})
             )
             
-            log(f"[WebSocket] Enhancement complete, result length: {len(result)}")
+            cache.set(f"enhance_messages_{self.task_id}", result, timeout=3600)
+            
+            log(f"[WebSocket] Enhancement complete, result length: {len(result)}, messages stored: {len(self.messages)}")
             
             await self.send(text_data=json.dumps({
                 'type': 'task_complete',
@@ -193,3 +196,117 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             cache.incr(cache_key)
             
         return True
+
+class EditConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.messages: list[dict] = []
+        self.edit_task = None
+    
+    async def connect(self):
+        self.task_id = self.scope['url_route']['kwargs']['task_id']
+        self.room_group_name = f'edit_{self.task_id}'
+
+        log(f"[WebSocket] EditConsumer connecting to group: {self.room_group_name}")
+
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+        log(f"[WebSocket] EditConsumer connected and joined group: {self.room_group_name}")
+    
+    async def disconnect(self, close_code):
+        log(f"[WebSocket] EditConsumer disconnecting from group: {self.room_group_name}")
+        if self.edit_task and not self.edit_task.done():
+            self.edit_task.cancel()
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+    async def receive(self, text_data):
+        log(f"[WebSocket] EditConsumer received message: {text_data[:200]}")
+        try:
+            text_data_json = json.loads(text_data)
+            message_type = text_data_json.get('type')
+            log(f"[WebSocket] EditConsumer message type: {message_type}")
+
+            if message_type == 'edit_request':
+                log("[WebSocket] Starting edit process...")
+                # Send acknowledgment first
+                await self.send(text_data=json.dumps({
+                    'type': 'processing',
+                    'message': 'Edit process started'
+                }))
+                
+                enhancement_task_id = text_data_json.get("enhancement_task_id", None)
+                
+                if enhancement_task_id:
+                    cached_messages = cache.get(f"enhance_messages_{enhancement_task_id}")
+                    if cached_messages:
+                        self.messages = cached_messages
+                        log(f"[WebSocket] Loaded messages from cache for enhancement_task_id: {enhancement_task_id}, messages count: {len(self.messages)}")
+                    else:
+                        log(f"[WebSocket] No cached messages found for enhancement_task_id: {enhancement_task_id}")
+                
+                # Run edit process and handle result in callback
+                self.edit_task = asyncio.create_task(
+                    self._run_edit_with_callback(text_data_json)
+                )
+        except Exception as e:
+            log(f"[WebSocket] EditConsumer error in receive: {e}")
+            traceback.print_exc()
+            await self.send(text_data=json.dumps({
+                'type': 'task_error',
+                'error': str(e)
+            }))
+    
+    async def _run_edit_with_callback(self, data):
+        """Wrapper that ensures errors are properly sent to client."""
+        try:
+            await self.run_edit(data)
+        except asyncio.CancelledError:
+            log("[WebSocket] Edit task was cancelled")
+        except Exception as e:
+            log(f"[WebSocket] Unhandled error in edit: {e}")
+            traceback.print_exc()
+            try:
+                await self.send(text_data=json.dumps({
+                    'type': 'task_error',
+                    'error': str(e)
+                }))
+            except Exception:
+                pass
+
+    async def run_edit(self, data):
+        """Run the edit process directly in the WebSocket consumer."""
+        try:
+            # Import here to avoid circular imports at module load time
+            from .edit import edit_prompt_async
+            
+            log(f"[WebSocket] Calling edit_prompt_async with instructions: {data.get('edit_instructions', '')[:50]}")
+            
+            result = await edit_prompt_async(
+                edit_instructions=data.get('edit_instructions', ''),
+                model=os.getenv("MODEL", "gemini-3-flash-preview"),
+                use_web_search=data.get('use_web_search', True),
+                additional_context_query=data.get('additional_context_query', ''),
+                ask_user_func=self.ask_user_question,
+                target_model=data.get('target_model', 'gpt-5.1'),
+                is_reasoning_native=data.get('is_reasoning_native', False),
+                prompt_style=data.get('prompt_style', {})
+            )
+        
+            await self.send(text_data=json.dumps({
+                'type': 'edit_complete',
+                'result': result
+            }))
+            log("[WebSocket] Sent edit_complete to client")
+        except Exception as e:
+            log(f"[WebSocket] Edit error: {e}")
+            traceback.print_exc()
+            await self.send(text_data=json.dumps({
+                'type': 'task_error',
+                'error': str(e)
+            }))
