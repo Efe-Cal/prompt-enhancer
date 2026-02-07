@@ -1,20 +1,21 @@
 import os
 import json_repair as json
-from typing import Callable, Awaitable, Optional
 
 import openai
 from dotenv import load_dotenv
 
-from .prompt import build_prompts
+from .prompt import build_enhancement_prompts
 from . import log
 
 from .shared_utils import (
     FALLBACK_MODEL,
+    PromptConfig,
     get_async_client,
     web_search_async,
     check_hcai_status,
     format_answers_for_llm,
-    parse_llm_response
+    parse_llm_response,
+    get_tools
 )
 
 load_dotenv()
@@ -23,24 +24,24 @@ load_dotenv()
 async def enhance_prompt_async(
     task: str,
     lazy_prompt: str,
-    model: str,
-    use_web_search: bool = True,
-    additional_context_query: Optional[str] = None,
-    target_model: str = "gpt-5.1",
-    ask_user_func: Optional[Callable[[str], Awaitable[str]]] = None,
+    config: PromptConfig,
     falling_back: bool = False,
-    prompt_style: dict | None = None,
-    is_reasoning_native: bool = False
 ) -> tuple[str, bool, list[dict]]:
     """Async version of enhance_prompt that runs in the WebSocket consumer."""
     if not check_hcai_status() and not falling_back:
         log("HCAI service is down, falling back to alternative model...")
         if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "":
+            fallback_config = PromptConfig(
+                model=FALLBACK_MODEL,
+                use_web_search=config.use_web_search,
+                additional_context_query=config.additional_context_query,
+                target_model=config.target_model,
+                ask_user_func=config.ask_user_func,
+                prompt_style=config.prompt_style,
+                is_reasoning_native=config.is_reasoning_native,
+            )
             result, _, msgs = await enhance_prompt_async(
-                task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
-                additional_context_query, target_model, ask_user_func,
-                falling_back=True, prompt_style=prompt_style,
-                is_reasoning_native=is_reasoning_native
+                task, lazy_prompt, fallback_config, falling_back=True
             )
             return result, True, msgs
         else:
@@ -49,17 +50,17 @@ async def enhance_prompt_async(
     client = get_async_client(fallback=falling_back)
 
     additional_context = ""
-    if additional_context_query:
-        additional_context = await web_search_async(additional_context_query, 3)
+    if config.additional_context_query:
+        additional_context = await web_search_async(config.additional_context_query, 3)
     
-    system_prompt, user_prompt = build_prompts(
+    system_prompt, user_prompt = build_enhancement_prompts(
             task=task,
             lazy_prompt=lazy_prompt,
-            use_web_search=use_web_search,
+            use_web_search=config.use_web_search,
             additional_context=additional_context,
-            target_model=target_model,
-            prompt_style=prompt_style,
-            is_reasoning_native=is_reasoning_native
+            target_model=config.target_model,
+            prompt_style=config.prompt_style,
+            is_reasoning_native=config.is_reasoning_native
         ).values()
 
     messages = [
@@ -67,49 +68,11 @@ async def enhance_prompt_async(
         {"role": "user", "content": user_prompt},
     ]
     
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "get_user_input",
-                "description": "Ask the user for input to clarify the prompt.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "questions": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "The question(s) to ask the user",
-                        },
-                    },
-                    "required": ["questions"],
-                },
-            }
-        }
-    ]
-    
-    if use_web_search:
-        tools.append({
-            "type": "function",
-            "function": {
-                "name": "web_search",
-                "description": "Useful for when you need to look up information on the web to enhance the prompt.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query to look up.",
-                        },
-                    },
-                    "required": ["query"],
-                },
-            }
-        })
+    tools = get_tools(config.use_web_search)
     
     try:
         response = await client.chat.completions.create(
-            model=model,
+            model=config.model,
             messages=messages,
             tools=tools,
             reasoning_effort="medium"
@@ -132,8 +95,8 @@ async def enhance_prompt_async(
                 elif tool_call.function.name == "get_user_input":
                     args = json.loads(tool_call.function.arguments)
                     log("Asking user question via WebSocket...")
-                    if ask_user_func:
-                        user_input = await ask_user_func(args["questions"])
+                    if config.ask_user_func:
+                        user_input = await config.ask_user_func(args["questions"])
                     else:
                         user_input = "(No user input handler available)"
                     
@@ -148,7 +111,7 @@ async def enhance_prompt_async(
                     })
 
             response = await client.chat.completions.create(
-                model=model,
+                model=config.model,
                 messages=messages,
                 tools=tools,
                 reasoning_effort="medium"
@@ -162,15 +125,23 @@ async def enhance_prompt_async(
         result = parse_llm_response(result)
         
         return result, False, messages
+
+
     except openai.APIStatusError as e:
         log(f"APIStatusError: {e}")
         log("Falling back to alternative model...")
         if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "" and not falling_back:
+            fallback_config = PromptConfig(
+                model=FALLBACK_MODEL,
+                use_web_search=config.use_web_search,
+                additional_context_query=config.additional_context_query,
+                target_model=config.target_model,
+                ask_user_func=config.ask_user_func,
+                prompt_style=config.prompt_style,
+                is_reasoning_native=config.is_reasoning_native,
+            )
             result, _, msgs = await enhance_prompt_async(
-                task, lazy_prompt, FALLBACK_MODEL, use_web_search, 
-                additional_context_query, target_model, ask_user_func,
-                falling_back=True, prompt_style=prompt_style,
-                is_reasoning_native=is_reasoning_native
+                task, lazy_prompt, fallback_config, falling_back=True
             )
             return result, True, msgs
         else:

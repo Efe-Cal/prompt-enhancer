@@ -8,6 +8,7 @@ from django.conf import settings
 from asgiref.sync import sync_to_async
 from dotenv import load_dotenv
 from . import log
+from .shared_utils import PromptConfig
 
 load_dotenv()
 
@@ -132,19 +133,22 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             
             log(f"[WebSocket] Calling enhance_prompt_async with task: {data.get('task', '')[:50]}")
             
-            result, is_fallback, messages = await enhance_prompt_async(
-                task=data.get('task', ''),
-                lazy_prompt=data.get('lazy_prompt', ''),
+            config = PromptConfig(
                 model=os.getenv("MODEL", "gemini-3-flash-preview"),
                 use_web_search=data.get('use_web_search', True),
                 additional_context_query=data.get('additional_context_query', ''),
                 ask_user_func=self.ask_user_question,
                 target_model=data.get('target_model', 'gpt-5.1'),
                 is_reasoning_native=data.get('is_reasoning_native', False),
-                prompt_style=data.get('prompt_style', {})
+                prompt_style=data.get('prompt_style', {}),
+            )
+            result, is_fallback, messages = await enhance_prompt_async(
+                task=data.get('task', ''),
+                lazy_prompt=data.get('lazy_prompt', ''),
+                config=config,
             )
             
-            cache.set(f"enhance_messages_{self.task_id}", result, timeout=3600)
+            cache.set(f"enhance_messages_{self.task_id}", messages, timeout=3600)
             
             log(f"[WebSocket] Enhancement complete, result length: {len(result)}, messages stored: {len(self.messages)}")
             
@@ -204,10 +208,14 @@ class EditConsumer(AsyncWebsocketConsumer):
         super().__init__(*args, **kwargs)
         self.messages: list[dict] = []
         self.edit_task = None
+        self.pending_answer = None
+        self.answer_event = None
     
     async def connect(self):
         self.task_id = self.scope['url_route']['kwargs']['task_id']
         self.room_group_name = f'edit_{self.task_id}'
+        self.answer_event = asyncio.Event()
+
 
         log(f"[WebSocket] EditConsumer connecting to group: {self.room_group_name}")
 
@@ -297,20 +305,31 @@ class EditConsumer(AsyncWebsocketConsumer):
     async def run_edit(self, data):
         """Run the edit process directly in the WebSocket consumer."""
         try:
+            if data.get("edit_instructions", "") == "" :
+                raise ValueError("Edit instructions cannot be empty.")
+            
             # Import here to avoid circular imports at module load time
             from .edit import edit_prompt_async
             
             log(f"[WebSocket] Calling edit_prompt_async with instructions: {data.get('edit_instructions', '')[:50]}")
             
-            result = await edit_prompt_async(
-                edit_instructions=data.get('edit_instructions', ''),
+            enhancement_task_id = data.get("enhancement_task_id", None)
+            enhancement_messages = self._get_enhancement_messages(enhancement_task_id)
+            
+            config = PromptConfig(
                 model=os.getenv("MODEL", "gemini-3-flash-preview"),
                 use_web_search=data.get('use_web_search', True),
                 additional_context_query=data.get('additional_context_query', ''),
                 ask_user_func=self.ask_user_question,
                 target_model=data.get('target_model', 'gpt-5.1'),
                 is_reasoning_native=data.get('is_reasoning_native', False),
-                prompt_style=data.get('prompt_style', {})
+                prompt_style=data.get('prompt_style', {}),
+            )
+            result = await edit_prompt_async(
+                edit_instructions=data.get('edit_instructions', ''),
+                current_prompt=data.get('current_prompt', ''),
+                config=config,
+                enhancement_messages=enhancement_messages
             )
         
             await self.send(text_data=json.dumps({
@@ -325,3 +344,35 @@ class EditConsumer(AsyncWebsocketConsumer):
                 'type': 'task_error',
                 'error': str(e)
             }))
+
+
+    async def ask_user_question(self, questions: str, timeout: int = 300) -> str:
+        """Ask user a question and wait for answer via WebSocket."""
+        self.answer_event.clear()
+        self.pending_answer = None
+        
+        log(f"[WebSocket] Asking user question: {questions}")
+        await self.send(text_data=json.dumps({
+            'type': 'user_question',
+            'questions': questions
+        }))
+        
+        try:
+            await asyncio.wait_for(self.answer_event.wait(), timeout=timeout)
+            answer = self.pending_answer
+            self.pending_answer = None
+            log(f"[WebSocket] Got user answer: {answer}")
+            return answer or ""
+        except asyncio.TimeoutError:
+            raise TimeoutError(f"User did not respond within {timeout} seconds")
+    
+    def _get_enhancement_messages(self, enhancement_task_id):
+        """Helper to get enhancement messages from cache."""
+        if enhancement_task_id:
+            cached_messages = cache.get(f"enhance_messages_{enhancement_task_id}")
+            if cached_messages:
+                log(f"[WebSocket] Loaded messages from cache for enhancement_task_id: {enhancement_task_id}, messages count: {len(cached_messages)}")
+                return cached_messages
+            else:
+                log(f"[WebSocket] No cached messages found for enhancement_task_id: {enhancement_task_id}")
+        return []

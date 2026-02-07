@@ -128,6 +128,13 @@ Apply the following framework to every improvement:
 
 {_tools_section(use_web_search)}
 
+# Edit Requests
+If the user makes an edit request throughout the conversation, follow this instruction:
+- Carefully analyze the edit instructions and identify what the user is asking for. If the instructions are vague, use `get_user_input` to ask clarifying questions.
+- Edit the original prompt based on the new instructions while maintaining the integrity of the original task.
+- Try to make the minimal necessary changes to the original improved prompt to satisfy the new edit instructions.
+- Follow the same Output Format as described below when generating the edited prompt.
+
 # Output Format
 <output-format>
 1. **TOOL USE PRIORITY:** If you are unsure of the user's intent or need facts, **call the tool immediately**. Do NOT generate the analysis or improved prompt until you have sufficient information.
@@ -146,7 +153,7 @@ Here you provide the optimized, ready-to-use prompt text:
 """
     
     
-def build_prompts(task: str, lazy_prompt: str, use_web_search: bool, additional_context: str, target_model: str, prompt_style:dict, is_reasoning_native: bool = False) -> dict[str, str]:
+def build_enhancement_prompts(task: str, lazy_prompt: str, use_web_search: bool, additional_context: str, target_model: str, prompt_style:dict, is_reasoning_native: bool = False) -> dict[str, str]:
     """Build system and user prompts for the prompt enhancement process."""
 
     SYSTEM_PROMPT = _build_system_prompt(use_web_search, is_reasoning_native, additional_context)
@@ -182,9 +189,34 @@ When you have enough information, generate <analysis> and <improved-prompt> foll
         "user_prompt": USER_PROMPT
     }
 
+
+def _build_edit_user_prompt(edit_instructions: str, current_prompt: str) -> str: 
+    return f"""<current-prompt>
+{current_prompt}
+</current-prompt>
+
+<edit-instructions>
+{edit_instructions}
+</edit-instructions>
+
+<instructions>
+Edit the prompt above based on the edit instructions.
+</instructions>
+"""
+
+def build_edit_prompts(edit_instructions: str, current_prompt: str, use_web_search: bool, is_reasoning_native: bool = False) -> dict[str, str]:
+    """Build system and user prompts for the prompt editing process."""
+    SYSTEM_PROMPT = _build_system_prompt(use_web_search, is_reasoning_native, additional_context=None)
+    USER_PROMPT = _build_edit_user_prompt(edit_instructions, current_prompt)
+    return {
+        "system_prompt": SYSTEM_PROMPT,
+        "user_prompt": USER_PROMPT
+    }
+
 # Example usage
 if __name__ == "__main__":
-    system_prompt, user_prompt = build_prompts(
+    
+    system_prompt, user_prompt = build_enhancement_prompts(
             task="writing a cover letter",
             lazy_prompt="Write a cover letter for a software engineering position at Google.",
             use_web_search=True,

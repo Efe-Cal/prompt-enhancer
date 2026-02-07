@@ -1,4 +1,6 @@
 import os
+from dataclasses import dataclass
+from typing import Callable, Awaitable, Optional
 import unicodedata
 import re
 
@@ -11,6 +13,19 @@ from . import log
 load_dotenv()
 
 FALLBACK_MODEL = "gpt-5-mini"
+
+
+@dataclass
+class PromptConfig:
+    """Shared configuration for prompt enhancement and editing."""
+    model: str
+    use_web_search: bool = True
+    additional_context_query: Optional[str] = None
+    target_model: str = "gpt-5.1"
+    ask_user_func: Optional[Callable[[str], Awaitable[str]]] = None
+    prompt_style: dict | None = None
+    is_reasoning_native: bool = False
+
 
 def get_client():
     api_key = os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY") or ""
@@ -59,7 +74,7 @@ async def web_search_async(query: str, n=3) -> str:
     
     return data_str
 
-def format_answers_for_llm(questions:list[str],answers: list[str] | str) -> str:
+def format_answers_for_llm(questions:list[str], answers: list[str] | str) -> str:
     if answers == "CANCEL":
         return "User refused to answer the questions."
     if len(answers) == 1:
@@ -80,3 +95,46 @@ def parse_llm_response(response: str) -> None:
 def check_hcai_status() -> bool:
     res = httpx.get("https://ai.hackclub.com/up").json()
     return res.get("status", "down") == "up"
+
+def get_tools(use_web_search: bool):
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_user_input",
+                "description": "Ask the user for input to clarify the prompt.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "questions": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "The question(s) to ask the user",
+                        },
+                    },
+                    "required": ["questions"],
+                },
+            }
+        }
+    ]
+    
+    if use_web_search:
+        tools.append({
+            "type": "function",
+            "function": {
+                "name": "web_search",
+                "description": "Useful for when you need to look up information on the web to enhance the prompt.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to look up.",
+                        },
+                    },
+                    "required": ["query"],
+                },
+            }
+        })
+    
+    return tools

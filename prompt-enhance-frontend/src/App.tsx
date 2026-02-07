@@ -28,6 +28,7 @@ function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [originalEnhancedPrompt, setOriginalEnhancedPrompt] = useState('')
   const [copySuccess, setCopySuccess] = useState(false)
+  const [lastTaskId, setLastTaskId] = useState<string | null>(null)
 
   // Prompt style options
   const [promptStyleOpen, setPromptStyleOpen] = useState(false)
@@ -121,6 +122,7 @@ function App() {
         console.log('Task complete, result length:', data.result?.length)
         setEnhancedPrompt(data.result)
         setOriginalEnhancedPrompt(data.result)
+        setLastTaskId(taskId)
         saveToLocalStorage(goal, prompt, data.result, taskId)
         setIsLoading(false)
         setErrorMessage(data.is_fallback ? "Using fallback model due to HCAI service downtime." : null)
@@ -175,8 +177,7 @@ function App() {
     // Generate task ID on client side
     const taskId = crypto.randomUUID()
 
-    const enhancementTaskId = savedEntries?.find(e => e.id === parseInt(selectedEntry))?.task_id
-
+    const enhancementTaskId = savedEntries?.find(e => e.id === parseInt(selectedEntry))?.task_id || lastTaskId
 
     // Connect to WebSocket
     const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
@@ -187,7 +188,7 @@ function App() {
 
       // Send edit request through WebSocket
       websocket.send(JSON.stringify({
-        type: 'edit_prompt',
+        type: 'edit_request',
         current_prompt: enhancedPrompt,
         edit_request: editRequest,
         target_model: targetModel,
@@ -216,6 +217,10 @@ function App() {
         setIsEditLoading(false)
         setErrorMessage(data.is_fallback ? "Using fallback model due to HCAI service downtime." : null)
         websocket.close()
+      } else if (data.type === 'user_question') {
+        // Show dialog with user questions
+        setUserQuestions(data.questions)
+        setUserAnswers(new Array(data.questions.length).fill(''))
       } else if (data.type === 'task_error') {
         console.error('Edit error:', data.error)
         setErrorMessage(data.error)
