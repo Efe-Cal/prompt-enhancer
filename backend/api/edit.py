@@ -55,9 +55,7 @@ async def edit_prompt_async(
     if enhancement_messages:
         user_prompt = _build_edit_user_prompt(
             edit_instructions=edit_instructions,
-            current_prompt=current_prompt,
-            use_web_search=config.use_web_search,
-            is_reasoning_native=config.is_reasoning_native
+            current_prompt=current_prompt
         )
         messages = enhancement_messages + [{"role": "user", "content": user_prompt}]
     

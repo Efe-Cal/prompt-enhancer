@@ -32,7 +32,7 @@ def get_client():
     base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("BASE_URL") or "https://api.openai.com/v1"
     return OpenAI(api_key=api_key, base_url=base_url)
 
-def get_async_client(fallback: bool = False):
+def get_async_client(fallback: bool = False) -> AsyncOpenAI:
     if fallback:
         return AsyncOpenAI(api_key=os.getenv("FALLBACK_API_KEY", ""))
     api_key = os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY") or ""

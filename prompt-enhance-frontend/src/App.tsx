@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './App.css'
 import { Analytics } from '@vercel/analytics/react'
 
@@ -30,6 +30,22 @@ function App() {
   const [copySuccess, setCopySuccess] = useState(false)
   const [lastTaskId, setLastTaskId] = useState<string | null>(null)
 
+  const enhancedTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  const resizeEnhancedTextarea = () => {
+    const textarea = enhancedTextareaRef.current
+    if (!textarea) return
+
+    // Reset first so shrinking works as well.
+    textarea.style.height = 'auto'
+
+    const maxHeightPx = Math.floor(window.innerHeight * 0.8)
+    const nextHeightPx = Math.min(textarea.scrollHeight, maxHeightPx)
+
+    textarea.style.height = `${nextHeightPx}px`
+    textarea.style.overflowY = textarea.scrollHeight > maxHeightPx ? 'auto' : 'hidden'
+  }
+
   // Prompt style options
   const [promptStyleOpen, setPromptStyleOpen] = useState(false)
   const [promptFormatting, setPromptFormatting] = useState<'Any' | 'Markdown' | 'XML' |'Plain Text'>('Any')
@@ -46,6 +62,18 @@ function App() {
   useEffect(() => {
     handleRefresh()
   }, [])
+
+  useLayoutEffect(() => {
+    if (!enhancedPrompt || isLoading) return
+    resizeEnhancedTextarea()
+  }, [enhancedPrompt, isLoading])
+
+  useEffect(() => {
+    if (!enhancedPrompt || isLoading) return
+    const onResize = () => resizeEnhancedTextarea()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [enhancedPrompt, isLoading])
 
   const [models, setModels] = useState<string[]>([])
   const [targetModel, setTargetModel] = useState<string>('')
@@ -124,6 +152,7 @@ function App() {
         setOriginalEnhancedPrompt(data.result)
         setLastTaskId(taskId)
         saveToLocalStorage(goal, prompt, data.result, taskId)
+        requestAnimationFrame(() => resizeEnhancedTextarea())
         setIsLoading(false)
         setErrorMessage(data.is_fallback ? "Using fallback model due to HCAI service downtime." : null)
         websocket.close()
@@ -172,6 +201,7 @@ function App() {
   const handleEditRequest = () => {
     if (!editRequest.trim() || !enhancedPrompt) return
 
+    console.log('Submitting edit request:', editRequest)
     setIsEditLoading(true)
 
     // Generate task ID on client side
@@ -190,7 +220,7 @@ function App() {
       websocket.send(JSON.stringify({
         type: 'edit_request',
         current_prompt: enhancedPrompt,
-        edit_request: editRequest,
+        edit_instructions: editRequest,
         target_model: targetModel,
         is_reasoning_native: isReasoningNative,
         prompt_style: {
@@ -214,6 +244,7 @@ function App() {
         setEnhancedPrompt(data.result)
         setOriginalEnhancedPrompt(data.result)
         setEditRequest('')
+        requestAnimationFrame(() => resizeEnhancedTextarea())
         setIsEditLoading(false)
         setErrorMessage(data.is_fallback ? "Using fallback model due to HCAI service downtime." : null)
         websocket.close()
@@ -634,6 +665,7 @@ function App() {
               className="enhanced-output enhanced-output-editable"
               value={enhancedPrompt}
               onChange={(e) => setEnhancedPrompt(e.target.value)}
+              ref={enhancedTextareaRef}
             />
           ) : (
             <pre className="enhanced-output">

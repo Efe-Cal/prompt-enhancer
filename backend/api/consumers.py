@@ -148,9 +148,12 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 config=config,
             )
             
+            result = result or "Sorry, I couldn't generate a response."
+            messages = messages or []
+            
             cache.set(f"enhance_messages_{self.task_id}", messages, timeout=3600)
             
-            log(f"[WebSocket] Enhancement complete, result length: {len(result)}, messages stored: {len(self.messages)}")
+            log(f"[WebSocket] Enhancement complete, result length: {len(result)}, messages stored: {len(messages)}")
             
             await self.send(text_data=json.dumps({
                 'type': 'task_complete',
@@ -277,6 +280,12 @@ class EditConsumer(AsyncWebsocketConsumer):
                 self.edit_task = asyncio.create_task(
                     self._run_edit_with_callback(text_data_json)
                 )
+            else:
+                log(f"[WebSocket] Unknown message type received: {message_type}")
+                await self.send(text_data=json.dumps({
+                    'type': 'task_error',
+                    'error': f'Unknown message type: {message_type}'
+                }))
         except Exception as e:
             log(f"[WebSocket] EditConsumer error in receive: {e}")
             traceback.print_exc()
@@ -333,10 +342,10 @@ class EditConsumer(AsyncWebsocketConsumer):
             )
         
             await self.send(text_data=json.dumps({
-                'type': 'edit_complete',
+                'type': 'task_complete',
                 'result': result
             }))
-            log("[WebSocket] Sent edit_complete to client")
+            log("[WebSocket] Sent task_complete to client")
         except Exception as e:
             log(f"[WebSocket] Edit error: {e}")
             traceback.print_exc()
