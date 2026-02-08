@@ -1,33 +1,33 @@
 import os
 import json_repair as json
-
-import openai
 from dotenv import load_dotenv
 
-from .prompt import build_enhancement_prompts
+from .prompt import _build_edit_user_prompt
 from . import log
+import openai
 
 from .shared_utils import (
-    FALLBACK_MODEL,
     PromptConfig,
     get_async_client,
     web_search_async,
     check_hcai_status,
     format_answers_for_llm,
     parse_llm_response,
-    get_tools
+    get_tools,
+    FALLBACK_MODEL
 )
 
 load_dotenv()
 
-
-async def enhance_prompt_async(
-    task: str,
-    lazy_prompt: str,
+async def edit_prompt_async(
+    edit_instructions: str,
+    current_prompt: str,
     config: PromptConfig,
+    enhancement_messages: list[dict],
     falling_back: bool = False,
-) -> tuple[str, bool, list[dict]]:
-    """Async version of enhance_prompt that runs in the WebSocket consumer."""
+) -> str | None:
+    
+    # Check HCAI status before proceeding
     if not check_hcai_status() and not falling_back:
         log("HCAI service is down, falling back to alternative model...")
         if os.getenv("FALLBACK_API_KEY") and os.getenv("FALLBACK_API_KEY") != "":
@@ -40,36 +40,30 @@ async def enhance_prompt_async(
                 prompt_style=config.prompt_style,
                 is_reasoning_native=config.is_reasoning_native,
             )
-            result, _, msgs = await enhance_prompt_async(
-                task, lazy_prompt, fallback_config, falling_back=True
+            result = await edit_prompt_async(
+                edit_instructions, current_prompt, fallback_config, enhancement_messages, falling_back=True
             )
-            return result, True, msgs
+            return result
         else:
-            raise Exception("We are out of money! Please try again later.")    
+            raise Exception("We are out of money! Please try again later.")
     
     client = get_async_client(fallback=falling_back)
-
-    additional_context = ""
-    if config.additional_context_query:
-        additional_context = await web_search_async(config.additional_context_query, 3)
-    
-    system_prompt, user_prompt = build_enhancement_prompts(
-            task=task,
-            lazy_prompt=lazy_prompt,
-            use_web_search=config.use_web_search,
-            additional_context=additional_context,
-            target_model=config.target_model,
-            prompt_style=config.prompt_style,
-            is_reasoning_native=config.is_reasoning_native
-        ).values()
-
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
     
     tools = get_tools(config.use_web_search)
     
+    # Best case scenario - we have the messages frome the enhancement phase and can just continue the conversation
+    if enhancement_messages:
+        user_prompt = _build_edit_user_prompt(
+            edit_instructions=edit_instructions,
+            current_prompt=current_prompt
+        )
+        messages = enhancement_messages + [{"role": "user", "content": user_prompt}]
+    
+    # TODO: Implement this
+    # If we don't have enhancement messages, we need to start the conversation from scratch
+    else:
+        raise NotImplementedError("Starting edit without enhancement messages is not implemented yet.")
+     
     try:
         response = await client.chat.completions.create(
             model=config.model,
@@ -123,9 +117,8 @@ async def enhance_prompt_async(
         result = (response.choices[0].message.content or "").strip()
         
         result = parse_llm_response(result)
-        
-        return result, False, messages
 
+        return result
 
     except openai.APIStatusError as e:
         log(f"APIStatusError: {e}")
@@ -140,9 +133,10 @@ async def enhance_prompt_async(
                 prompt_style=config.prompt_style,
                 is_reasoning_native=config.is_reasoning_native,
             )
-            result, _, msgs = await enhance_prompt_async(
-                task, lazy_prompt, fallback_config, falling_back=True
+            result = await edit_prompt_async(
+                edit_instructions, current_prompt, fallback_config, messages, falling_back=True
             )
-            return result, True, msgs
+            return result
         else:
             raise Exception("We are out of money! Please try again later.") from e
+

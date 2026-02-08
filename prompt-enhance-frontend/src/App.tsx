@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './App.css'
 import { Analytics } from '@vercel/analytics/react'
 
@@ -8,11 +8,12 @@ interface SavedEntry {
   task: string
   lazy_prompt: string
   enhanced_prompt: string
-  created_at: string
+  created_at: string,
+  task_id: string
 }
 
 function App() {
-  const [task, setTask] = useState('')
+  const [goal, setGoal] = useState('')
   const [prompt, setPrompt] = useState('')
   const [enhancedPrompt, setEnhancedPrompt] = useState('')
   const [useWebSearch, setUseWebSearch] = useState(true)
@@ -27,6 +28,23 @@ function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [originalEnhancedPrompt, setOriginalEnhancedPrompt] = useState('')
   const [copySuccess, setCopySuccess] = useState(false)
+  const [lastTaskId, setLastTaskId] = useState<string | null>(null)
+
+  const enhancedTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  const resizeEnhancedTextarea = () => {
+    const textarea = enhancedTextareaRef.current
+    if (!textarea) return
+
+    // Reset first so shrinking works as well.
+    textarea.style.height = 'auto'
+
+    const maxHeightPx = Math.floor(window.innerHeight * 0.8)
+    const nextHeightPx = Math.min(textarea.scrollHeight, maxHeightPx)
+
+    textarea.style.height = `${nextHeightPx}px`
+    textarea.style.overflowY = textarea.scrollHeight > maxHeightPx ? 'auto' : 'hidden'
+  }
 
   // Prompt style options
   const [promptStyleOpen, setPromptStyleOpen] = useState(false)
@@ -37,9 +55,25 @@ function App() {
   // Mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // Edit request state
+  const [editRequest, setEditRequest] = useState('')
+  const [isEditLoading, setIsEditLoading] = useState(false)
+
   useEffect(() => {
     handleRefresh()
   }, [])
+
+  useLayoutEffect(() => {
+    if (!enhancedPrompt || isLoading) return
+    resizeEnhancedTextarea()
+  }, [enhancedPrompt, isLoading])
+
+  useEffect(() => {
+    if (!enhancedPrompt || isLoading) return
+    const onResize = () => resizeEnhancedTextarea()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [enhancedPrompt, isLoading])
 
   const [models, setModels] = useState<string[]>([])
   const [targetModel, setTargetModel] = useState<string>('')
@@ -66,7 +100,6 @@ function App() {
   }, [])
 
 
-
   const handleEnhance = () => {
     setIsLoading(true)
     setEnhancedPrompt('')
@@ -87,7 +120,7 @@ function App() {
       // Send enhance request directly through WebSocket
       websocket.send(JSON.stringify({
         type: 'enhance',
-        task,
+        task: goal,
         lazy_prompt: prompt,
         use_web_search: useWebSearch,
         additional_context_query: searchQuery,
@@ -117,7 +150,9 @@ function App() {
         console.log('Task complete, result length:', data.result?.length)
         setEnhancedPrompt(data.result)
         setOriginalEnhancedPrompt(data.result)
-        saveToLocalStorage(task, prompt, data.result)
+        setLastTaskId(taskId)
+        saveToLocalStorage(goal, prompt, data.result, taskId)
+        requestAnimationFrame(() => resizeEnhancedTextarea())
         setIsLoading(false)
         setErrorMessage(data.is_fallback ? "Using fallback model due to HCAI service downtime." : null)
         websocket.close()
@@ -163,13 +198,86 @@ function App() {
     })
   }
 
-  const saveToLocalStorage = (currentTask: string, currentPrompt: string, result: string) => {
+  const handleEditRequest = () => {
+    if (!editRequest.trim() || !enhancedPrompt) return
+
+    console.log('Submitting edit request:', editRequest)
+    setIsEditLoading(true)
+
+    // Generate task ID on client side
+    const taskId = crypto.randomUUID()
+
+    const enhancementTaskId = savedEntries?.find(e => e.id === parseInt(selectedEntry))?.task_id || lastTaskId
+
+    // Connect to WebSocket
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
+    const websocket = new WebSocket(`${wsUrl}/ws/edit/${taskId}/`)
+
+    websocket.onopen = () => {
+      console.log('WebSocket connected for edit request')
+
+      // Send edit request through WebSocket
+      websocket.send(JSON.stringify({
+        type: 'edit_request',
+        current_prompt: enhancedPrompt,
+        edit_instructions: editRequest,
+        target_model: targetModel,
+        is_reasoning_native: isReasoningNative,
+        prompt_style: {
+          formatting: promptFormatting,
+          length: promptLength,
+          technique: promptTechnique
+        },
+        enhancement_task_id: enhancementTaskId
+      }))
+      console.log('Edit request sent via WebSocket')
+    }
+
+    websocket.onmessage = (event) => {
+      console.log('WebSocket message received:', event.data)
+      const data = JSON.parse(event.data)
+
+      if (data.type === 'processing') {
+        console.log('Edit processing started')
+      } else if (data.type === 'task_complete') {
+        console.log('Edit complete, result length:', data.result?.length)
+        setEnhancedPrompt(data.result)
+        setOriginalEnhancedPrompt(data.result)
+        setEditRequest('')
+        requestAnimationFrame(() => resizeEnhancedTextarea())
+        setIsEditLoading(false)
+        setErrorMessage(data.is_fallback ? "Using fallback model due to HCAI service downtime." : null)
+        websocket.close()
+      } else if (data.type === 'user_question') {
+        // Show dialog with user questions
+        setUserQuestions(data.questions)
+        setUserAnswers(new Array(data.questions.length).fill(''))
+      } else if (data.type === 'task_error') {
+        console.error('Edit error:', data.error)
+        setErrorMessage(data.error)
+        setIsEditLoading(false)
+        websocket.close()
+      }
+    }
+
+    websocket.onerror = (error) => {
+      console.error('WebSocket error:', error)
+      setIsEditLoading(false)
+    }
+
+    websocket.onclose = () => {
+      console.log('WebSocket disconnected')
+    }
+  }
+
+  const saveToLocalStorage = (currentTask: string, currentPrompt: string, result: string, taskId: string) => {
     const newEntry: SavedEntry = {
       id: Date.now(),
       task: currentTask,
       lazy_prompt: currentPrompt,
       enhanced_prompt: result,
-      created_at: new Date().toLocaleString()
+      created_at: new Date().toLocaleString(),
+      task_id: taskId
     }
 
     const existingEntries = JSON.parse(localStorage.getItem('saved_prompts') || '[]')
@@ -182,7 +290,7 @@ function App() {
   const handleLoad = (id: number) => {
     const entry = savedEntries?.find(e => e.id === id)
     if (entry) {
-      setTask(entry.task)
+      setGoal(entry.task)
       setPrompt(entry.lazy_prompt)
       setEnhancedPrompt(entry.enhanced_prompt)
       setOriginalEnhancedPrompt(entry.enhanced_prompt)
@@ -348,8 +456,8 @@ function App() {
             type="text"
             className="form-input"
             placeholder="Describe the task"
-            value={task}
-            onChange={(e) => setTask(e.target.value)}
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
           />
         </div>
 
@@ -557,6 +665,7 @@ function App() {
               className="enhanced-output enhanced-output-editable"
               value={enhancedPrompt}
               onChange={(e) => setEnhancedPrompt(e.target.value)}
+              ref={enhancedTextareaRef}
             />
           ) : (
             <pre className="enhanced-output">
@@ -564,7 +673,68 @@ function App() {
             </pre>
           )}
         </div>
+
+        {/* Desktop Edit Request Input */}
+        {enhancedPrompt && !isLoading && (
+          <div className="edit-request-row">
+            <input
+              type="text"
+              className="edit-request-input"
+              placeholder="Request edits to the prompt..."
+              value={editRequest}
+              onChange={(e) => setEditRequest(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleEditRequest()}
+              disabled={isEditLoading}
+            />
+            <button
+              className={`edit-request-btn ${editRequest.trim() ? 'active' : ''}`}
+              onClick={handleEditRequest}
+              disabled={isEditLoading || !editRequest.trim()}
+              title="Send edit request"
+            >
+              {isEditLoading ? (
+                <div className="edit-spinner"></div>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              )}
+            </button>
+          </div>
+        )}
       </aside>
+
+      {/* Mobile Sticky Edit Bar */}
+      {enhancedPrompt && !isLoading && (
+        <div className="mobile-edit-bar">
+          <input
+            type="text"
+            className="mobile-edit-input"
+            placeholder="Request edits..."
+            value={editRequest}
+            onChange={(e) => setEditRequest(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleEditRequest()}
+            disabled={isEditLoading}
+          />
+          <button
+            className={`mobile-edit-btn ${editRequest.trim() ? 'active' : ''}`}
+            onClick={handleEditRequest}
+            disabled={isEditLoading || !editRequest.trim()}
+            title="Send edit request"
+          >
+            {isEditLoading ? (
+              <div className="edit-spinner"></div>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
+
       <Analytics />
     </div>
   )

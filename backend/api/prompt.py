@@ -12,7 +12,7 @@ def _tools_section(use_web_search: bool) -> str:
     return f"""# Tool Usage and Examples
 
 {web_tool}
-## get_user_input(questions: list[str]) -> str (formated as Q&A)
+## get_user_input(questions: list[str]) -> str (formatted as Q&A)
 - Use when you need more information to improve the prompt.
 - Keep the questions concise and short.
 - You are **STRONGLY ENCOURAGED** to use this tool **MULTIPLE** times if needed. You can use it to ask follow-up questions to get more specific information.
@@ -100,10 +100,9 @@ def _prompt_style_section(prompt_style: dict) -> str:
     prompt_style_str += "</prompt-style>"
     return prompt_style_str
 
-def build_prompts(task: str, lazy_prompt: str, use_web_search: bool, additional_context: str, target_model: str, prompt_style:dict, is_reasoning_native: bool = False) -> dict[str, str]:
-    """Build system and user prompts for the prompt enhancement process."""
 
-    SYSTEM_PROMPT = f"""# Role
+def _build_system_prompt(use_web_search: bool, is_reasoning_native: bool, additional_context: str) -> str:
+    return f"""# Role
 You are an elite Prompt Engineer with 15+ years of experience in LLM architecture and prompting.
 Your goal is to take a raw input and transform it into a highly effective, optimized, production-ready prompt.
 
@@ -129,6 +128,13 @@ Apply the following framework to every improvement:
 
 {_tools_section(use_web_search)}
 
+# Edit Requests
+If the user makes an edit request throughout the conversation, follow this instruction:
+- Carefully analyze the edit instructions and identify what the user is asking for. If the instructions are vague, use `get_user_input` to ask clarifying questions.
+- Edit the original prompt based on the new instructions while maintaining the integrity of the original task.
+- Try to make the minimal necessary changes to the original improved prompt to satisfy the new edit instructions.
+- Follow the same Output Format as described below when generating the edited prompt.
+
 # Output Format
 <output-format>
 1. **TOOL USE PRIORITY:** If you are unsure of the user's intent or need facts, **call the tool immediately**. Do NOT generate the analysis or improved prompt until you have sufficient information.
@@ -145,6 +151,12 @@ Here you provide the optimized, ready-to-use prompt text:
 </improved-prompt>
 </output-format>
 """
+    
+    
+def build_enhancement_prompts(task: str, lazy_prompt: str, use_web_search: bool, additional_context: str, target_model: str, prompt_style:dict, is_reasoning_native: bool = False) -> dict[str, str]:
+    """Build system and user prompts for the prompt enhancement process."""
+
+    SYSTEM_PROMPT = _build_system_prompt(use_web_search, is_reasoning_native, additional_context)
 
     target_model_desc = f"<target-model>{target_model}</target-model>" if target_model else ""
 
@@ -177,13 +189,38 @@ When you have enough information, generate <analysis> and <improved-prompt> foll
         "user_prompt": USER_PROMPT
     }
 
+
+def _build_edit_user_prompt(edit_instructions: str, current_prompt: str) -> str: 
+    return f"""<current-prompt>
+{current_prompt}
+</current-prompt>
+
+<edit-instructions>
+{edit_instructions}
+</edit-instructions>
+
+<instructions>
+Edit the prompt above based on the edit instructions.
+</instructions>
+"""
+
+def build_edit_prompts(edit_instructions: str, current_prompt: str, use_web_search: bool, is_reasoning_native: bool = False) -> dict[str, str]:
+    """Build system and user prompts for the prompt editing process."""
+    SYSTEM_PROMPT = _build_system_prompt(use_web_search, is_reasoning_native, additional_context=None)
+    USER_PROMPT = _build_edit_user_prompt(edit_instructions, current_prompt)
+    return {
+        "system_prompt": SYSTEM_PROMPT,
+        "user_prompt": USER_PROMPT
+    }
+
 # Example usage
 if __name__ == "__main__":
-    system_prompt, user_prompt = build_prompts(
+    
+    system_prompt, user_prompt = build_enhancement_prompts(
             task="writing a cover letter",
             lazy_prompt="Write a cover letter for a software engineering position at Google.",
             use_web_search=True,
-            additional_context="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            additional_context="[DUMMY WEB SEARCH RESULTS ABOUT GOOGLE'S CORE VALUES]",
             target_model="gpt-5.1",
             prompt_style={"length": "Concise", "formatting": "Markdown", "technique": "Few-Shot"}
         ).values()
