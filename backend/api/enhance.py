@@ -9,12 +9,12 @@ from . import log
 
 from .shared_utils import (
     FALLBACK_MODEL,
+    EnhancedPromptResponse,
     PromptConfig,
     get_async_client,
     web_search_async,
     check_hcai_status,
     format_answers_for_llm,
-    parse_llm_response,
     get_tools
 )
 
@@ -75,11 +75,14 @@ async def enhance_prompt_async(
             model=config.model,
             messages=messages,
             tools=tools,
-            reasoning_effort="medium"
+            reasoning_effort="medium",
         )
         log(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")
         
-        while response.choices[0].message.tool_calls:
+        count = 1
+        while (response.choices[0].message.tool_calls 
+               or (response.choices[0].message.content.strip() == "" and
+                    not response.choices[0].message.tool_calls)) and count <= 6:
             messages.append(response.choices[0].message)
             for tool_call in response.choices[0].message.tool_calls:
                 log(f"[DEBUG] Processing Tool Call (Async): {tool_call.function.name} with args: {tool_call.function.arguments}")
@@ -110,19 +113,21 @@ async def enhance_prompt_async(
                         "content": user_input
                     })
 
-            response = await client.chat.completions.create(
+            response = await client.chat.completions.parse(
                 model=config.model,
                 messages=messages,
                 tools=tools,
-                reasoning_effort="medium"
+                reasoning_effort="medium",
+                response_format=EnhancedPromptResponse,
             )
             log(f"[DEBUG] Next LLM Response (Async): {response.choices[0].message}")
+            count += 1
 
         messages.append({"role": "assistant", "content": response.choices[0].message.content})
+                
+        result = (response.choices[0].message.parsed or None)
         
-        result = (response.choices[0].message.content or "").strip()
-        
-        result = parse_llm_response(result)
+        result = result.improved_prompt if result else None
         
         return result, False, messages
 

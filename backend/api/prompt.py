@@ -138,17 +138,13 @@ If the user makes an edit request throughout the conversation, follow this instr
 # Output Format
 <output-format>
 1. **TOOL USE PRIORITY:** If you are unsure of the user's intent or need facts, **call the tool immediately**. Do NOT generate the analysis or improved prompt until you have sufficient information.
-2. **STANDARD OUTPUT:** Only when you have sufficient information to build the prompt, output the following two in **STRICT XML** format:
+2. **STANDARD OUTPUT:** Only when you have sufficient information to build the prompt, output the following two:
 
-<analysis>
+- Analysis:
 Here you provide a brief analysis of user's intention, the weaknesses in the raw input prompt and what you plan to improve.
-</analysis>
 
-<improved-prompt>
-Here you provide the optimized, ready-to-use prompt text: 
-- Encapsulate the final prompt in proper XML tag <improved-prompt>.
-- DO NOT include any additional text other than the final prompt.
-</improved-prompt>
+- Improved Prompt:
+Here you provide the optimized, ready-to-use prompt text. DO NOT include any additional text other than the final prompt.
 </output-format>
 """
     

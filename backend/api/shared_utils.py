@@ -7,6 +7,7 @@ import re
 import httpx
 from dotenv import load_dotenv
 from openai import OpenAI, AsyncOpenAI
+from pydantic import BaseModel
 
 from . import log
 
@@ -26,6 +27,10 @@ class PromptConfig:
     prompt_style: dict | None = None
     is_reasoning_native: bool = False
 
+
+class EnhancedPromptResponse(BaseModel):
+    analysis: str
+    improved_prompt: str
 
 def get_client():
     api_key = os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY") or ""
@@ -114,7 +119,9 @@ def get_tools(use_web_search: bool):
                     },
                     "required": ["questions"],
                 },
-            }
+                "strict":True,
+            },
+            
         }
     ]
     
@@ -134,7 +141,9 @@ def get_tools(use_web_search: bool):
                     },
                     "required": ["query"],
                 },
-            }
+                "strict": True,
+            },
+            
         })
     
     return tools
