@@ -12,9 +12,9 @@ from .shared_utils import (
     web_search_async,
     check_hcai_status,
     format_answers_for_llm,
-    parse_llm_response,
     get_tools,
-    FALLBACK_MODEL
+    FALLBACK_MODEL,
+    EnhancedPromptResponse
 )
 
 load_dotenv()
@@ -51,7 +51,7 @@ async def edit_prompt_async(
     
     tools = get_tools(config.use_web_search)
     
-    # Best case scenario - we have the messages frome the enhancement phase and can just continue the conversation
+    # Best case scenario - we have the messages from the enhancement phase and can just continue the conversation
     if enhancement_messages:
         user_prompt = _build_edit_user_prompt(
             edit_instructions=edit_instructions,
@@ -60,7 +60,7 @@ async def edit_prompt_async(
         messages = enhancement_messages + [{"role": "user", "content": user_prompt}]
     
     # TODO: Implement this
-    # If we don't have enhancement messages, we need to start the conversation from scratch
+    # If we don't have enhancement messages, we need to reconstruct the conversation from scratch
     else:
         raise NotImplementedError("Starting edit without enhancement messages is not implemented yet.")
      
@@ -104,19 +104,20 @@ async def edit_prompt_async(
                         "content": user_input
                     })
 
-            response = await client.chat.completions.create(
+            response = await client.chat.completions.parse(
                 model=config.model,
                 messages=messages,
                 tools=tools,
-                reasoning_effort="medium"
+                reasoning_effort="medium",
+                response_format=EnhancedPromptResponse,
             )
             log(f"[DEBUG] Next LLM Response (Async): {response.choices[0].message}")
 
         messages.append({"role": "assistant", "content": response.choices[0].message.content})
         
-        result = (response.choices[0].message.content or "").strip()
+        result = (response.choices[0].message.parsed or None)
         
-        result = parse_llm_response(result)
+        result = result.improved_prompt if result else None
 
         return result
 

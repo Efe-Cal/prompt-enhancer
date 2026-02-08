@@ -151,7 +151,15 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             result = result or "Sorry, I couldn't generate a response."
             messages = messages or []
             
-            cache.set(f"enhance_messages_{self.task_id}", messages, timeout=3600)
+            serializable_messages = []
+            for msg in messages:
+                if hasattr(msg, 'model_dump'):
+                    serializable_messages.append(msg.model_dump(mode="json"))
+                elif isinstance(msg, dict):
+                    serializable_messages.append(msg)
+                else:
+                    serializable_messages.append(str(msg))
+            cache.set(f"enhance_messages_{self.task_id}", serializable_messages, timeout=3600)
             
             log(f"[WebSocket] Enhancement complete, result length: {len(result)}, messages stored: {len(messages)}")
             
