@@ -154,7 +154,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             serializable_messages = []
             for msg in messages:
                 if hasattr(msg, 'model_dump'):
-                    serializable_messages.append(msg.model_dump())
+                    serializable_messages.append(msg.model_dump(mode="json"))
                 elif isinstance(msg, dict):
                     serializable_messages.append(msg)
                 else:
