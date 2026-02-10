@@ -1,6 +1,6 @@
 import type { StepType } from '@reactour/tour'
 
-export const tourSteps: StepType[] = [
+export const generateTourSteps = (setShowRightPanel: (show: boolean) => void): StepType[] => [
   {
     selector: window.innerWidth < 768 ? '.mobile-title' : '.main-title',
     content: (
@@ -101,6 +101,7 @@ export const tourSteps: StepType[] = [
         </p>
       </div>
     ),
+    action: () => setShowRightPanel(true),
   },
   {
     selector: window.innerWidth < 768 ? '.mobile-edit-bar' : '.edit-request-row',
@@ -112,6 +113,8 @@ export const tourSteps: StepType[] = [
         </p>
       </div>
     ),
+    action: () => setShowRightPanel(true),
+    actionAfter: () => setShowRightPanel(false),
     resizeObservables: [window.innerWidth < 768 ? '.mobile-edit-bar' : '.edit-request-row']
   },
   {

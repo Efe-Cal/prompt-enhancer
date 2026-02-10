@@ -709,6 +709,13 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.mobile-header-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
 .mobile-title {
   font-size: 18px;
   font-weight: 700;
@@ -1406,101 +1413,6 @@
   }
 }
 
-/* ========================================
-   TOUR STYLES
-   ======================================== */
-
-/* Advanced features prompt modal */
-.tour-prompt-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(74, 55, 40, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  animation: fadeIn 0.2s ease;
-}
-
-.tour-prompt-box {
-  background-color: #f5efe6;
-  border-radius: 16px;
-  padding: 32px;
-  max-width: 380px;
-  width: 90%;
-  box-shadow: 0 8px 32px rgba(74, 55, 40, 0.25);
-  border: 2px solid #b8956c;
-  text-align: center;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.tour-prompt-box h3 {
-  margin: 0 0 12px 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #4a3728;
-}
-
-.tour-prompt-box p {
-  margin: 0 0 24px 0;
-  font-size: 15px;
-  color: #5d4a3a;
-  line-height: 1.5;
-}
-
-.tour-prompt-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.tour-prompt-btn {
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.tour-prompt-btn.primary {
-  background-color: #b8956c;
-  color: #fff;
-}
-
-.tour-prompt-btn.primary:hover {
-  background-color: #a07d5a;
-  transform: translateY(-1px);
-}
-
-.tour-prompt-btn.secondary {
-  background-color: #e8dcc8;
-  color: #4a3728;
-}
-
-.tour-prompt-btn.secondary:hover {
-  background-color: #d9cbb7;
-}
 
 /* Mobile adjustments for tour help button */
 @media (max-width: 768px) {

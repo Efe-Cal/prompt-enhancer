@@ -408,7 +408,7 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
 
       {/* Mobile Header */}
       <header className="mobile-header">
-        <div style={{display:'flex', flexDirection:'row', alignItems:"center", gap:'12px'}}>
+        <div className="mobile-header-group">
         <button 
           className="hamburger-btn"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
