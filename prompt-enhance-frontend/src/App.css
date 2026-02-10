@@ -135,11 +135,44 @@
 
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .main-title {
   font-size: 32px;
   font-weight: 700;
   color: #4a3728;
-  margin: 0 0 8px 0;
+  margin: 0;
+}
+
+.tour-help-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #b8956c;
+  color: #fff;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tour-help-btn:hover {
+  background-color: #a07d5a;
+  transform: scale(1.1);
+}
+
+.tour-help-btn:active {
+  transform: scale(0.95);
 }
 
 .main-subtitle {
@@ -1003,12 +1036,20 @@
   .error-message {
     font-size: 14px;
   }
+  
+  .enhanced-output-container{
+    padding-bottom: 5vh;
+  }
 }
 
 /* ========================================
    SMALL MOBILE BREAKPOINT (max-width: 480px)
    ======================================== */
 @media (max-width: 480px) {
+  .enhanced-output-container{
+    padding-bottom: 5vh;
+  }
+
   .main-content {
     padding: 16px 12px;
   }
@@ -1344,6 +1385,7 @@
     .mobile-header {
       padding-left: max(16px, env(safe-area-inset-left));
       padding-right: max(16px, env(safe-area-inset-right));
+      justify-content: space-between;
     }
 
     .main-content {
@@ -1361,5 +1403,124 @@
       padding-left: max(24px, env(safe-area-inset-left));
       padding-bottom: max(24px, env(safe-area-inset-bottom));
     }
+  }
+}
+
+/* ========================================
+   TOUR STYLES
+   ======================================== */
+
+/* Advanced features prompt modal */
+.tour-prompt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(74, 55, 40, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
+
+.tour-prompt-box {
+  background-color: #f5efe6;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(74, 55, 40, 0.25);
+  border: 2px solid #b8956c;
+  text-align: center;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tour-prompt-box h3 {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #4a3728;
+}
+
+.tour-prompt-box p {
+  margin: 0 0 24px 0;
+  font-size: 15px;
+  color: #5d4a3a;
+  line-height: 1.5;
+}
+
+.tour-prompt-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.tour-prompt-btn {
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.tour-prompt-btn.primary {
+  background-color: #b8956c;
+  color: #fff;
+}
+
+.tour-prompt-btn.primary:hover {
+  background-color: #a07d5a;
+  transform: translateY(-1px);
+}
+
+.tour-prompt-btn.secondary {
+  background-color: #e8dcc8;
+  color: #4a3728;
+}
+
+.tour-prompt-btn.secondary:hover {
+  background-color: #d9cbb7;
+}
+
+/* Mobile adjustments for tour help button */
+@media (max-width: 768px) {
+  .tour-help-btn {
+    display:none;
+  }
+
+  .tour-help-btn-mobile {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    display: flex;
+  }
+  
+  .tour-prompt-box {
+    padding: 24px;
+    margin: 16px;
+  }
+  
+  .tour-prompt-actions {
+    flex-direction: column;
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useTour } from '@reactour/tour'
 import './App.css'
 import { Analytics } from '@vercel/analytics/react'
 
@@ -12,7 +13,8 @@ interface SavedEntry {
   task_id: string
 }
 
-function App() {
+function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
+  const { setIsOpen, setCurrentStep } = useTour()
   const [goal, setGoal] = useState('')
   const [prompt, setPrompt] = useState('')
   const [enhancedPrompt, setEnhancedPrompt] = useState('')
@@ -62,6 +64,24 @@ function App() {
   useEffect(() => {
     handleRefresh()
   }, [])
+
+  // Auto-start tour for first-time visitors
+  useEffect(() => {
+    const tourCompleted = localStorage.getItem('tourCompleted')
+    if (!tourCompleted) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        setIsOpen(true)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [setIsOpen])
+
+  // Help button handler to restart tour
+  const handleStartTour = () => {
+    setCurrentStep(0)
+    setIsOpen(true)
+  }
 
   useLayoutEffect(() => {
     if (!enhancedPrompt || isLoading) return
@@ -388,6 +408,7 @@ function App() {
 
       {/* Mobile Header */}
       <header className="mobile-header">
+        <div style={{display:'flex', flexDirection:'row', alignItems:"center", gap:'12px'}}>
         <button 
           className="hamburger-btn"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -396,6 +417,15 @@ function App() {
           <span className={`hamburger-icon ${mobileMenuOpen ? 'open' : ''}`}></span>
         </button>
         <h1 className="mobile-title">Prompt Enhance</h1>
+        </div>
+        <button 
+            className="tour-help-btn tour-help-btn-mobile"
+            onClick={handleStartTour}
+            title="Take a tour"
+            aria-label="Start walkthrough tour"
+          >
+            ?
+          </button>
       </header>
 
       {/* Mobile overlay */}
@@ -447,10 +477,20 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
-        <h1 className="main-title">Prompt Enhance</h1>
+        <div className="title-row">
+          <h1 className="main-title">Prompt Enhance</h1>
+          <button 
+            className="tour-help-btn"
+            onClick={handleStartTour}
+            title="Take a tour"
+            aria-label="Start walkthrough tour"
+          >
+            ?
+          </button>
+        </div>
         <p className="main-subtitle">Transform your ideas into powerful prompts</p>
 
-        <div className="form-section">
+        <div className="form-section" id='task'>
           <label className="form-label">Task / Goal</label>
           <input
             type="text"
@@ -461,7 +501,7 @@ function App() {
           />
         </div>
 
-        <div className="form-section">
+        <div className="form-section" id='prompt'>
           <label className="form-label">Your Prompt</label>
           <textarea
             className="form-textarea"
@@ -631,14 +671,14 @@ function App() {
       <aside className="enhanced-panel">
         <h2 className="enhanced-title">Enhanced Prompt</h2>
         <div className="enhanced-output-container">
-          {enhancedPrompt && !isLoading && (
+          {(enhancedPrompt && !isLoading || showRightPanel) && (
             <div className="enhanced-output-actions">
               <button 
                 className="action-btn copy-btn" 
                 onClick={handleCopyToClipboard}
                 title="Copy to clipboard"
               >
-                {copySuccess ? '✓ Copied' : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M18.327 7.286h-8.044a1.932 1.932 0 0 0-1.925 1.938v10.088c0 1.07.862 1.938 1.925 1.938h8.044a1.932 1.932 0 0 0 1.925-1.938V9.224c0-1.07-.862-1.938-1.925-1.938"/><path d="M15.642 7.286V4.688c0-.514-.203-1.007-.564-1.37a1.918 1.918 0 0 0-1.361-.568H5.673c-.51 0-1 .204-1.36.568a1.945 1.945 0 0 0-.565 1.37v10.088c0 .514.203 1.007.564 1.37c.361.364.85.568 1.361.568h2.685"/></g></svg>}
+                {copySuccess ? '✓ Copied' : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" strokeWidth="1.5"><path d="M18.327 7.286h-8.044a1.932 1.932 0 0 0-1.925 1.938v10.088c0 1.07.862 1.938 1.925 1.938h8.044a1.932 1.932 0 0 0 1.925-1.938V9.224c0-1.07-.862-1.938-1.925-1.938"/><path d="M15.642 7.286V4.688c0-.514-.203-1.007-.564-1.37a1.918 1.918 0 0 0-1.361-.568H5.673c-.51 0-1 .204-1.36.568a1.945 1.945 0 0 0-.565 1.37v10.088c0 .514.203 1.007.564 1.37c.361.364.85.568 1.361.568h2.685"/></g></svg>}
               </button>
               {isEnhancedPromptModified && selectedEntry && (
                 <button 
@@ -647,7 +687,7 @@ function App() {
                   title="Save changes"
                 >
                   {/* Save icon (floppy disk) */}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M21.25 9.16v7.987a4.1 4.1 0 0 1-1.204 2.901a4.113 4.113 0 0 1-2.906 1.202H6.86a4.113 4.113 0 0 1-2.906-1.202a4.1 4.1 0 0 1-1.204-2.901V6.853a4.1 4.1 0 0 1 1.204-2.901A4.113 4.113 0 0 1 6.86 2.75h8.35a3.004 3.004 0 0 1 2.25.998l3 3.415c.501.545.783 1.256.79 1.997"/><path d="M7 21.22v-5.241a1.995 1.995 0 0 1 2-1.997h6a2.002 2.002 0 0 1 2 1.997v5.241M15.8 2.81v4.183a1.526 1.526 0 0 1-1.52 1.528H9.72A1.531 1.531 0 0 1 8.2 6.993V2.75m1.946 15.108h3.708"/></g></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" strokeWidth="1.5"><path d="M21.25 9.16v7.987a4.1 4.1 0 0 1-1.204 2.901a4.113 4.113 0 0 1-2.906 1.202H6.86a4.113 4.113 0 0 1-2.906-1.202a4.1 4.1 0 0 1-1.204-2.901V6.853a4.1 4.1 0 0 1 1.204-2.901A4.113 4.113 0 0 1 6.86 2.75h8.35a3.004 3.004 0 0 1 2.25.998l3 3.415c.501.545.783 1.256.79 1.997"/><path d="M7 21.22v-5.241a1.995 1.995 0 0 1 2-1.997h6a2.002 2.002 0 0 1 2 1.997v5.241M15.8 2.81v4.183a1.526 1.526 0 0 1-1.52 1.528H9.72A1.531 1.531 0 0 1 8.2 6.993V2.75m1.946 15.108h3.708"/></g></svg>
                 </button>
               )}
             </div>
@@ -675,7 +715,7 @@ function App() {
         </div>
 
         {/* Desktop Edit Request Input */}
-        {enhancedPrompt && !isLoading && (
+        {(enhancedPrompt && !isLoading || showRightPanel) && (
           <div className="edit-request-row">
             <input
               type="text"
@@ -706,7 +746,7 @@ function App() {
       </aside>
 
       {/* Mobile Sticky Edit Bar */}
-      {enhancedPrompt && !isLoading && (
+      {(enhancedPrompt && !isLoading || showRightPanel) && (
         <div className="mobile-edit-bar">
           <input
             type="text"
