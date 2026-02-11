@@ -138,8 +138,8 @@ If the user makes an edit request throughout the conversation, follow this instr
 # Output Format
 <output-format>
 1. **TOOL USE PRIORITY:** If you are unsure of the user's intent or need facts, **call the tool immediately**. Do NOT generate the analysis or improved prompt until you have sufficient information.
-2. **STANDARD OUTPUT:** Only when you have sufficient information to build the prompt, output the following two:
 
+2. **STANDARD OUTPUT:** Only when you have sufficient information to build the prompt, output the following two:
 - Analysis:
 Here you provide a brief analysis of user's intention, the weaknesses in the raw input prompt and what you plan to improve.
 
@@ -187,7 +187,9 @@ When you have enough information, generate <analysis> and <improved-prompt> foll
 
 
 def _build_edit_user_prompt(edit_instructions: str, current_prompt: str) -> str: 
-    return f"""<current-prompt>
+    return f"""# Edit Request
+The user has requested the following edits to the original prompt:
+<current-prompt>
 {current_prompt}
 </current-prompt>
 
@@ -196,7 +198,7 @@ def _build_edit_user_prompt(edit_instructions: str, current_prompt: str) -> str:
 </edit-instructions>
 
 <instructions>
-Edit the prompt above based on the edit instructions.
+Edit the prompt above based on the edit instructions. DO NOT make any changes that are not explicitly requested by the edit instructions. If the edit instructions are vague, CALL `get_user_input` to ask for clarification.
 </instructions>
 """
 

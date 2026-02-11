@@ -2,7 +2,7 @@ import os
 import json_repair as json
 from dotenv import load_dotenv
 
-from .prompt import _build_edit_user_prompt
+from .prompt import _build_edit_user_prompt, _build_system_prompt
 from . import log
 import openai
 
@@ -58,12 +58,19 @@ async def edit_prompt_async(
             current_prompt=current_prompt
         )
         messages = enhancement_messages + [{"role": "user", "content": user_prompt}]
-    
-    # TODO: Implement this
+
     # If we don't have enhancement messages, we need to reconstruct the conversation from scratch
     else:
-        raise NotImplementedError("Starting edit without enhancement messages is not implemented yet.")
-     
+        system_prompt = _build_system_prompt(use_web_search=config.use_web_search, is_reasoning_native=config.is_reasoning_native, additional_context=None)
+        user_prompt = _build_edit_user_prompt(
+            edit_instructions=edit_instructions,
+            current_prompt=current_prompt
+        )
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
     try:
         response = await client.chat.completions.create(
             model=config.model,
