@@ -12,6 +12,8 @@ from .shared_utils import (
     EnhancedPromptResponse,
     PromptConfig,
     get_async_client,
+    parse_llm_response_XML,
+    parse_llm_response_markdown,
     web_search_async,
     check_hcai_status,
     format_answers_for_llm,
@@ -80,10 +82,13 @@ async def enhance_prompt_async(
         log(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")
         
         count = 1
-        while (response.choices[0].message.tool_calls 
+        while (response.choices[0].message.tool_calls
                or (response.choices[0].message.content.strip() == "" and
                     not response.choices[0].message.tool_calls)) and count <= 6:
             messages.append(response.choices[0].message)
+            if not response.choices[0].message.tool_calls:
+                log(f"[DEBUG] LLM response has no tool calls but content is empty.")
+                break
             for tool_call in response.choices[0].message.tool_calls:
                 log(f"[DEBUG] Processing Tool Call (Async): {tool_call.function.name} with args: {tool_call.function.arguments}")
                 if tool_call.function.name == "web_search":
@@ -124,11 +129,25 @@ async def enhance_prompt_async(
             count += 1
 
         messages.append({"role": "assistant", "content": response.choices[0].message.content})
-                
-        result = (response.choices[0].message.parsed or None)
         
-        result = result.improved_prompt if result else None
-        
+        if hasattr(response.choices[0].message, "parsed") and response.choices[0].message.parsed:
+            result = (response.choices[0].message.parsed or None)
+            result = result.improved_prompt if result else None
+        else:
+            log(f"[DEBUG] No parsed content in LLM response")
+            try:
+                result = json.loads(response.choices[0].message.content)
+                if "improved_prompt" in result:
+                    result = result["improved_prompt"]
+                else: raise ValueError("No 'improved_prompt' key in JSON response")
+            except Exception as e:
+                log(f"[ERROR] Failed to repair JSON in LLM response. Trying XML. Error: {e}")
+                result = parse_llm_response_XML(response.choices[0].message.content)
+                if not result:
+                    log(f"[ERROR] Failed to parse XML in LLM response. Using markdown parsing")
+                    result = parse_llm_response_markdown(response.choices[0].message.content)
+                    
+                    
         return result, False, messages
 
 

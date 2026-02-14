@@ -87,7 +87,7 @@ def format_answers_for_llm(questions:list[str], answers: list[str] | str) -> str
     else:
         return "\n".join([f"Q: {q}\nA: {answer if answer else 'User did not provide an answer for this question.'}" for q, answer in zip(questions, answers)])
 
-def parse_llm_response(response: str) -> None:
+def parse_llm_response_XML(response: str) -> str | None:
     improved_prompt_match = re.search(r"<improved-prompt>(.*?)</improved-prompt>", response, re.DOTALL)
     if improved_prompt_match:
         improved_prompt = improved_prompt_match.group(1).strip()
@@ -95,6 +95,18 @@ def parse_llm_response(response: str) -> None:
         return improved_prompt
     else:
         log("[DEBUG] No <improved-prompt> tag found in LLM response.")
+        return None
+
+def parse_llm_response_markdown(response: str) -> str | None:
+    improved_prompt_matches = re.findall(r"\*{0,2}Improved Prompt\*{0,2}\s*(.*?)\s*(?=##|$)", response, re.DOTALL | re.IGNORECASE)
+    if improved_prompt_matches:
+        improved_prompt = improved_prompt_matches[-1].strip()
+        if improved_prompt.startswith("**Prompt:**"):
+            improved_prompt = improved_prompt[len("**Prompt:**"):].strip()
+        log(f"[DEBUG] Parsed Improved Prompt from Markdown: {improved_prompt[:50]}...")
+        return improved_prompt
+    else:
+        log("[DEBUG] No '## Improved Prompt' section found in LLM response.")
         return None
 
 def check_hcai_status() -> bool:
