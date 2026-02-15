@@ -150,6 +150,7 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
             result, is_fallback, messages = await enhance_prompt_async(
                 task=data.get('task', ''),
                 lazy_prompt=data.get('lazy_prompt', ''),
+                reasoning_effort=data.get('reasoning_effort', 'low'),
                 config=config,
             )
             t_after_enhance = time.perf_counter()

@@ -61,6 +61,11 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
   const [editRequest, setEditRequest] = useState('')
   const [isEditLoading, setIsEditLoading] = useState(false)
 
+  // Thinking mode state
+  const [thinkingMode, setThinkingMode] = useState<'low' | 'medium' | 'high'>('low')
+  const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false)
+  const thinkingRef = useRef<HTMLDivElement | null>(null)
+
   useEffect(() => {
     handleRefresh()
   }, [])
@@ -76,6 +81,17 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
       return () => clearTimeout(timer)
     }
   }, [setIsOpen])
+
+  // Close thinking menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (thinkingRef.current && !thinkingRef.current.contains(e.target as Node)) {
+        setThinkingMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Help button handler to restart tour
   const handleStartTour = () => {
@@ -146,6 +162,7 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
         additional_context_query: searchQuery,
         target_model: targetModel,
         is_reasoning_native: isReasoningNative,
+        reasoning_effort: thinkingMode,
         prompt_style: {
           formatting: promptFormatting,
           length: promptLength,
@@ -636,9 +653,38 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
         )}
 
         <div className="actions-section">
-          <button className="enhance-btn" onClick={handleEnhance}>
-            Enhance
-          </button>
+          <div className="enhance-btn-group" ref={thinkingRef}>
+            <button className="enhance-btn" onClick={handleEnhance}>
+              Enhance
+            </button>
+            <button
+              className={`thinking-toggle-btn ${thinkingMenuOpen ? 'open' : ''}`}
+              onClick={() => setThinkingMenuOpen(!thinkingMenuOpen)}
+              title="Thinking mode"
+              aria-label="Toggle thinking mode"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18h6"/>
+                <path d="M10 22h4"/>
+                <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>
+              </svg>
+            </button>
+            {thinkingMenuOpen && (
+              <div className="thinking-menu">
+                <span className="thinking-menu-label">Thinking</span>
+                {(['low', 'medium', 'high'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    className={`thinking-option ${thinkingMode === mode ? 'active' : ''}`}
+                    onClick={() => { setThinkingMode(mode); setThinkingMenuOpen(false) }}
+                  >
+                    <span className={`thinking-dot ${mode}`} />
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="model-selector">
             <input

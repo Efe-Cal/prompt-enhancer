@@ -87,11 +87,12 @@ async def edit_prompt_async(
         
     try:
         _mark("llm_call_1_start")
-        response = await client.chat.completions.create(
+        response = await client.chat.completions.parse(
             model=config.model,
             messages=messages,
             tools=tools,
-            reasoning_effort="low"
+            reasoning_effort="low",
+            response_format=EnhancedPromptResponse,
         )
         _mark("llm_call_1_done")
         log(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")

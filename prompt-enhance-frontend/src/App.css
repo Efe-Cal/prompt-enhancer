@@ -365,7 +365,7 @@
   padding: 12px 32px;
   background-color: #c49a6c;
   border: none;
-  border-radius: 4px;
+  border-radius: 4px 0 0 4px;
   font-size: 14px;
   font-weight: 500;
   color: #fff;
@@ -376,6 +376,94 @@
 .enhance-btn:hover {
   background-color: #b08858;
 }
+
+/* Enhance button group with thinking toggle */
+.enhance-btn-group {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
+.thinking-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  background-color: #b78b5a;
+  border: none;
+  border-left: 1px solid rgba(255,255,255,0.25);
+  border-radius: 0 4px 4px 0;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.thinking-toggle-btn:hover,
+.thinking-toggle-btn.open {
+  background-color: #a07848;
+}
+
+.thinking-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 8px 0;
+  z-index: 100;
+  min-width: 150px;
+  animation: thinkingFadeIn 0.15s ease;
+}
+
+@keyframes thinkingFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.thinking-menu-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  padding: 4px 14px 6px;
+}
+
+.thinking-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.thinking-option:hover {
+  background-color: #f5f0e8;
+}
+
+.thinking-option.active {
+  font-weight: 600;
+  background-color: #f0e8da;
+}
+
+.thinking-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.thinking-dot.low    { background-color: #66bb6a; }
+.thinking-dot.medium { background-color: #ffa726; }
+.thinking-dot.high   { background-color: #ef5350; }
 
 .model-indicator {
   font-size: 13px;
@@ -959,6 +1047,15 @@
     width: 100%;
     padding: 16px;
     font-size: 16px;
+    border-radius: 4px 0 0 4px;
+  }
+
+  .enhance-btn-group {
+    width: 100%;
+  }
+
+  .thinking-toggle-btn {
+    padding: 0 14px;
   }
 
   .model-selector {

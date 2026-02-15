@@ -28,6 +28,7 @@ async def enhance_prompt_async(
     task: str,
     lazy_prompt: str,
     config: PromptConfig,
+    reasoning_effort: str = "low",
     falling_back: bool = False,
 ) -> tuple[str, bool, list[dict]]:
     """Async version of enhance_prompt that runs in the WebSocket consumer."""
@@ -53,7 +54,7 @@ async def enhance_prompt_async(
                 is_reasoning_native=config.is_reasoning_native,
             )
             result, _, msgs = await enhance_prompt_async(
-                task, lazy_prompt, fallback_config, falling_back=True
+                task, lazy_prompt,config=fallback_config, reasoning_effort=reasoning_effort, falling_back=True
             )
             return result, True, msgs
         else:
@@ -90,11 +91,12 @@ async def enhance_prompt_async(
     
     try:
         _mark("llm_call_1_start")
-        response = await client.chat.completions.create(
+        response = await client.chat.completions.parse(
             model=config.model,
             messages=messages,
             tools=tools,
-            reasoning_effort="low",
+            reasoning_effort=reasoning_effort,
+            response_format=EnhancedPromptResponse,
         )
         _mark("llm_call_1_done")
         log(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")
@@ -145,7 +147,7 @@ async def enhance_prompt_async(
                 model=config.model,
                 messages=messages,
                 tools=tools,
-                reasoning_effort="medium",
+                reasoning_effort=reasoning_effort,
                 response_format=EnhancedPromptResponse,
             )
             _mark(f"llm_call_{count + 1}_done")
@@ -198,7 +200,7 @@ async def enhance_prompt_async(
                 is_reasoning_native=config.is_reasoning_native,
             )
             result, _, msgs = await enhance_prompt_async(
-                task, lazy_prompt, fallback_config, falling_back=True
+                task, lazy_prompt, config=fallback_config, reasoning_effort=reasoning_effort, falling_back=True
             )
             return result, True, msgs
         else:
