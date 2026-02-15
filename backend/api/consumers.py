@@ -1,6 +1,7 @@
 import json
 import asyncio
 import os
+import time
 import traceback
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.core.cache import cache
@@ -128,10 +129,12 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
     async def run_enhancement(self, data):
         """Run the enhancement process directly in the WebSocket consumer."""
         try:
+            t_ws_start = time.perf_counter()
             # Import here to avoid circular imports at module load time
             from .enhance import enhance_prompt_async
             
             log(f"[WebSocket] Calling enhance_prompt_async with task: {data.get('task', '')[:50]}")
+            log(f"[TIMING] [WS] enhance request received")
             
             config = PromptConfig(
                 model=os.getenv("MODEL", "gemini-3-flash-preview"),
@@ -142,11 +145,15 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 is_reasoning_native=data.get('is_reasoning_native', False),
                 prompt_style=data.get('prompt_style', {}),
             )
+            t_before_enhance = time.perf_counter()
+            log(f"[TIMING] [WS] config built in {t_before_enhance - t_ws_start:.3f}s")
             result, is_fallback, messages = await enhance_prompt_async(
                 task=data.get('task', ''),
                 lazy_prompt=data.get('lazy_prompt', ''),
                 config=config,
             )
+            t_after_enhance = time.perf_counter()
+            log(f"[TIMING] [WS] enhance_prompt_async completed in {t_after_enhance - t_before_enhance:.3f}s")
             
             result = result or "Sorry, I couldn't generate a response."
             messages = messages or []
@@ -160,6 +167,8 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 else:
                     serializable_messages.append(str(msg))
             cache.set(f"enhance_messages_{self.task_id}", serializable_messages, timeout=3600)
+            t_after_cache = time.perf_counter()
+            log(f"[TIMING] [WS] message serialization + cache in {t_after_cache - t_after_enhance:.3f}s")
             
             log(f"[WebSocket] Enhancement complete, result length: {len(result)}, messages stored: {len(messages)}")
             
@@ -168,6 +177,8 @@ class EnhanceConsumer(AsyncWebsocketConsumer):
                 'result': result,
                 'is_fallback': is_fallback
             }))
+            t_total = time.perf_counter() - t_ws_start
+            log(f"[TIMING] [WS] total enhance request wall time: {t_total:.3f}s")
             log("[WebSocket] Sent task_complete to client")
             
         except Exception as e:
@@ -322,6 +333,7 @@ class EditConsumer(AsyncWebsocketConsumer):
     async def run_edit(self, data):
         """Run the edit process directly in the WebSocket consumer."""
         try:
+            t_ws_start = time.perf_counter()
             if data.get("edit_instructions", "") == "" :
                 raise ValueError("Edit instructions cannot be empty.")
             
@@ -329,9 +341,12 @@ class EditConsumer(AsyncWebsocketConsumer):
             from .edit import edit_prompt_async
             
             log(f"[WebSocket] Calling edit_prompt_async with instructions: {data.get('edit_instructions', '')[:50]}")
+            log(f"[TIMING] [WS] edit request received")
             
             enhancement_task_id = data.get("enhancement_task_id", None)
             enhancement_messages = self._get_enhancement_messages(enhancement_task_id)
+            t_after_cache_load = time.perf_counter()
+            log(f"[TIMING] [WS] enhancement messages loaded in {t_after_cache_load - t_ws_start:.3f}s")
             
             config = PromptConfig(
                 model=os.getenv("MODEL", "gemini-3-flash-preview"),
@@ -342,17 +357,22 @@ class EditConsumer(AsyncWebsocketConsumer):
                 is_reasoning_native=data.get('is_reasoning_native', False),
                 prompt_style=data.get('prompt_style', {}),
             )
+            t_before_edit = time.perf_counter()
             result = await edit_prompt_async(
                 edit_instructions=data.get('edit_instructions', ''),
                 current_prompt=data.get('current_prompt', ''),
                 config=config,
                 enhancement_messages=enhancement_messages
             )
+            t_after_edit = time.perf_counter()
+            log(f"[TIMING] [WS] edit_prompt_async completed in {t_after_edit - t_before_edit:.3f}s")
         
             await self.send(text_data=json.dumps({
                 'type': 'task_complete',
                 'result': result
             }))
+            t_total = time.perf_counter() - t_ws_start
+            log(f"[TIMING] [WS] total edit request wall time: {t_total:.3f}s")
             log("[WebSocket] Sent task_complete to client")
         except Exception as e:
             log(f"[WebSocket] Edit error: {e}")
