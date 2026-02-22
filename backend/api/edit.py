@@ -15,7 +15,9 @@ from .shared_utils import (
     format_answers_for_llm,
     get_tools,
     FALLBACK_MODEL,
-    EnhancedPromptResponse
+    EnhancedPromptResponse,
+    parse_llm_response_XML,
+    parse_llm_response_markdown
 )
 
 load_dotenv()
@@ -87,12 +89,12 @@ async def edit_prompt_async(
         
     try:
         _mark("llm_call_1_start")
-        response = await client.chat.completions.parse(
+        # Use .create() during tool loop to avoid parsing errors when model returns tool calls
+        response = await client.chat.completions.create(
             model=config.model,
             messages=messages,
             tools=tools,
             reasoning_effort="low",
-            response_format=EnhancedPromptResponse,
         )
         _mark("llm_call_1_done")
         log(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")
@@ -134,23 +136,62 @@ async def edit_prompt_async(
                     })
 
             _mark(f"llm_call_{count + 1}_start")
-            response = await client.chat.completions.parse(
+            # Continue using .create() during tool loop
+            response = await client.chat.completions.create(
                 model=config.model,
                 messages=messages,
                 tools=tools,
                 reasoning_effort="medium",
-                response_format=EnhancedPromptResponse,
             )
             _mark(f"llm_call_{count + 1}_done")
             log(f"[DEBUG] Next LLM Response (Async): {response.choices[0].message}")
             count += 1
 
-        messages.append({"role": "assistant", "content": response.choices[0].message.content})
-        
         _mark("parsing_response_start")
-        result = (response.choices[0].message.parsed or None)
+        content = response.choices[0].message.content or ""
+        result = None
         
-        result = result.improved_prompt if result else None
+        # First, try to parse the response from the tool loop
+        if content:
+            try:
+                parsed = json.loads(content)
+                if "improved_prompt" in parsed:
+                    result = parsed["improved_prompt"]
+                    log(f"[DEBUG] Successfully parsed response from tool loop")
+            except Exception as e:
+                log(f"[DEBUG] Could not parse tool loop response as JSON: {e}")
+                # Try XML/markdown parsing
+                result = parse_llm_response_XML(content)
+                if not result:
+                    result = parse_llm_response_markdown(content)
+        
+        # If parsing failed, make a final call with response_format (no tools)
+        if not result:
+            log(f"[DEBUG] Making final parse call with response_format")
+            _mark("final_parse_call_start")
+            messages.append(response.choices[0].message)
+            final_response = await client.chat.completions.parse(
+                model=config.model,
+                messages=messages,
+                reasoning_effort="low",
+                response_format=EnhancedPromptResponse,
+            )
+            _mark("final_parse_call_done")
+            
+            if hasattr(final_response.choices[0].message, "parsed") and final_response.choices[0].message.parsed:
+                result = final_response.choices[0].message.parsed.improved_prompt
+            else:
+                # Last resort: manual parsing of final response
+                content = final_response.choices[0].message.content or ""
+                try:
+                    parsed = json.loads(content)
+                    result = parsed.get("improved_prompt")
+                except:
+                    result = parse_llm_response_XML(content) or parse_llm_response_markdown(content)
+            
+            messages.append({"role": "assistant", "content": final_response.choices[0].message.content})
+        else:
+            messages.append({"role": "assistant", "content": content})
 
         _mark("edit_complete")
         log(f"[TIMING] === Edit Timing Summary ===")
