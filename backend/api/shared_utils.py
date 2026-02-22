@@ -98,16 +98,56 @@ def parse_llm_response_XML(response: str) -> str | None:
         return None
 
 def parse_llm_response_markdown(response: str) -> str | None:
-    improved_prompt_matches = re.findall(r"\*{0,2}Improved Prompt\*{0,2}\s*(.*?)\s*(?=##|$)", response, re.DOTALL | re.IGNORECASE)
-    if improved_prompt_matches:
-        improved_prompt = improved_prompt_matches[-1].strip()
+    marker_pattern = re.compile(
+        r"^\s*(?:[-*+]\s*)?(?:\*{1,2}\s*)?(?:[-*+]\s*)?(?:#{1,6}\s*)?Improved\s+Prompt(?:\s*\*{1,2})?\s*:?\s*(?:\*{1,2})?\s*(.*)$",
+        re.IGNORECASE,
+    )
+
+    next_section_pattern = re.compile(
+        r"^\s*(?:\*{1,2})?\s*(?:#{1,6}\s*)?[A-Z][A-Za-z0-9\s/&()_-]{1,48}\s*:?\s*(?:\*{1,2})?\s*$"
+    )
+
+    lines = response.splitlines()
+    for idx, line in enumerate(lines):
+        marker_match = marker_pattern.match(line)
+        if not marker_match:
+            continue
+
+        inline_value = marker_match.group(1).strip()
+        if inline_value:
+            if inline_value.startswith("**Prompt:**"):
+                inline_value = inline_value[len("**Prompt:**"):].strip()
+            if inline_value:
+                log(f"[DEBUG] Parsed Improved Prompt from Markdown inline label: {inline_value[:50]}...")
+                return inline_value
+
+        collected: list[str] = []
+        in_code_fence = False
+        for next_line in lines[idx + 1:]:
+            stripped = next_line.strip()
+
+            if stripped.startswith("```"):
+                in_code_fence = not in_code_fence
+                continue
+
+            if not in_code_fence and next_section_pattern.match(next_line) and stripped:
+                break
+
+            collected.append(next_line)
+
+        improved_prompt = "\n".join(collected).strip()
         if improved_prompt.startswith("**Prompt:**"):
             improved_prompt = improved_prompt[len("**Prompt:**"):].strip()
-        log(f"[DEBUG] Parsed Improved Prompt from Markdown: {improved_prompt[:50]}...")
-        return improved_prompt
-    else:
-        log("[DEBUG] No '## Improved Prompt' section found in LLM response.")
+
+        if improved_prompt:
+            log(f"[DEBUG] Parsed Improved Prompt from Markdown block: {improved_prompt[:50]}...")
+            return improved_prompt
+
+        log("[DEBUG] Found Improved Prompt label but no prompt content.")
         return None
+
+    log("[DEBUG] No markdown Improved Prompt label found in LLM response.")
+    return None
 
 def check_hcai_status() -> bool:
     res = httpx.get("https://ai.hackclub.com/up").json()
