@@ -33,6 +33,8 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
   const [lastTaskId, setLastTaskId] = useState<string | null>(null)
 
   const enhancedTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const [showIframe, setShowIframe] = useState(false)
 
   const resizeEnhancedTextarea = () => {
     const textarea = enhancedTextareaRef.current
@@ -344,6 +346,13 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
       console.error('Failed to copy:', err)
     }
   }
+
+  const handleTestPrompt = () => {
+    setShowIframe(true)
+    // Copy to clipboard as reliable fallback
+    navigator.clipboard.writeText(enhancedPrompt).catch(() => {})
+  }
+
 
   const handleSaveChanges = () => {
     if (!selectedEntry) return
@@ -726,6 +735,16 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
               >
                 {copySuccess ? '✓ Copied' : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffffff"><g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" strokeWidth="1.5"><path d="M18.327 7.286h-8.044a1.932 1.932 0 0 0-1.925 1.938v10.088c0 1.07.862 1.938 1.925 1.938h8.044a1.932 1.932 0 0 0 1.925-1.938V9.224c0-1.07-.862-1.938-1.925-1.938"/><path d="M15.642 7.286V4.688c0-.514-.203-1.007-.564-1.37a1.918 1.918 0 0 0-1.361-.568H5.673c-.51 0-1 .204-1.36.568a1.945 1.945 0 0 0-.565 1.37v10.088c0 .514.203 1.007.564 1.37c.361.364.85.568 1.361.568h2.685"/></g></svg>}
               </button>
+              <button
+                className="action-btn test-btn"
+                onClick={handleTestPrompt}
+                title="Test this prompt"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <span className="test-btn-label">Test it</span>
+              </button>
               {isEnhancedPromptModified && selectedEntry && (
                 <button 
                   className="action-btn save-btn" 
@@ -790,7 +809,42 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
           </div>
         )}
       </aside>
-
+        
+      {/* Test Prompt Iframe Overlay */}
+      {showIframe && (
+        <div className="iframe-overlay">
+          <div className="iframe-panel">
+            <div className="iframe-header">
+              <div className="iframe-header-left">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span>Test Your Prompt</span>
+              </div>
+              <div className="iframe-header-right">
+                <span className="iframe-hint">Prompt copied to clipboard — paste it in the chat</span>
+                <button
+                  className="iframe-close-btn"
+                  onClick={() => setShowIframe(false)}
+                  title="Close"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <iframe
+              ref={iframeRef}
+              src="https://libreassistant.vercel.app/"
+              className="test-iframe"
+              title="Test your prompt with LibreAssistant"
+            />
+          </div>
+        </div>
+      )}
+      
       {/* Mobile Sticky Edit Bar */}
       {(enhancedPrompt && !isLoading || showRightPanel) && (
         <div className="mobile-edit-bar">
