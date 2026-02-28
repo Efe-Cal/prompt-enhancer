@@ -79,6 +79,8 @@ export const generateTourSteps = (setShowRightPanel: (show: boolean) => void): S
         </p>
       </div>
     ),
+    mutationObservables: ['.prompt-style-section'],
+    resizeObservables: ['.model-selector'],
   },
   {
     selector: '.enhance-btn',
