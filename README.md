@@ -1,5 +1,6 @@
 # PromptEnhance
 
+<img width="1408" height="768" alt="prompt-enhance-image" src="https://github.com/user-attachments/assets/05bd4a05-d5b7-4cfd-94e9-481625bcec0b" />
 
 ## Overview
 
