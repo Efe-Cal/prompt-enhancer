@@ -3,6 +3,8 @@ import { useTour } from '@reactour/tour'
 import './App.css'
 import { Analytics } from '@vercel/analytics/react'
 
+const LIBRE_ASSISTANT_BASE_URL = 'https://libreassistant.vercel.app/'
+
 
 interface SavedEntry {
   id: number
@@ -35,6 +37,7 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
   const enhancedTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const [showIframe, setShowIframe] = useState(false)
+  const [iframeUrl, setIframeUrl] = useState<string>(LIBRE_ASSISTANT_BASE_URL)
 
   const resizeEnhancedTextarea = () => {
     const textarea = enhancedTextareaRef.current
@@ -348,9 +351,12 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
   }
 
   const handleTestPrompt = () => {
+    if (!enhancedPrompt) return
+    const params = new URLSearchParams()
+    params.set('q', enhancedPrompt)
+    if (targetModel) params.set('model', targetModel)
+    setIframeUrl(`${LIBRE_ASSISTANT_BASE_URL}?${params.toString()}`)
     setShowIframe(true)
-    // Copy to clipboard as reliable fallback
-    navigator.clipboard.writeText(enhancedPrompt).catch(() => {})
   }
 
 
@@ -822,7 +828,7 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
                 <span>Test Your Prompt</span>
               </div>
               <div className="iframe-header-right">
-                <span className="iframe-hint">Prompt copied to clipboard — paste it in the chat</span>
+                <span className="iframe-hint">Prompt pre-filled — select a model and send it</span>
                 <button
                   className="iframe-close-btn"
                   onClick={() => setShowIframe(false)}
@@ -837,7 +843,7 @@ function App({showRightPanel = false}: {showRightPanel?: boolean} = {}) {
             </div>
             <iframe
               ref={iframeRef}
-              src="https://libreassistant.vercel.app/"
+              src={iframeUrl}
               className="test-iframe"
               title="Test your prompt with LibreAssistant"
             />
