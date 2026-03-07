@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from .shared_utils import parse_llm_response_markdown
+from .shared_utils import parse_llm_response_markdown, EnhancedPromptResponse
 
 # Create your tests here.
 
@@ -37,3 +37,16 @@ class ParseLlmResponseMarkdownTests(TestCase):
 	def test_returns_none_when_marker_has_no_content(self):
 		response = "- Improved Prompt:\n```markdown\n```"
 		self.assertIsNone(parse_llm_response_markdown(response))
+
+
+class EnhancedPromptResponseTests(TestCase):
+	def test_parses_with_both_fields(self):
+		obj = EnhancedPromptResponse(analysis="Some analysis", improved_prompt="Better prompt")
+		self.assertEqual(obj.analysis, "Some analysis")
+		self.assertEqual(obj.improved_prompt, "Better prompt")
+
+	def test_parses_without_analysis_field(self):
+		"""analysis is optional – a missing field must not raise a ValidationError."""
+		obj = EnhancedPromptResponse(improved_prompt="Better prompt")
+		self.assertIsNone(obj.analysis)
+		self.assertEqual(obj.improved_prompt, "Better prompt")

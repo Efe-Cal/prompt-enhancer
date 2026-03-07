@@ -102,13 +102,8 @@ async def enhance_prompt_async(
         log(f"[DEBUG] Initial LLM Response (Async): {response.choices[0].message}")
         
         count = 1
-        while (response.choices[0].message.tool_calls
-               or (response.choices[0].message.content.strip() == "" and
-                    not response.choices[0].message.tool_calls)) and count <= 6:
+        while response.choices[0].message.tool_calls and count <= 6:
             messages.append(response.choices[0].message)
-            if not response.choices[0].message.tool_calls:
-                log(f"[DEBUG] LLM response has no tool calls but content is empty.")
-                break
             for tool_call in response.choices[0].message.tool_calls:
                 log(f"[DEBUG] Processing Tool Call (Async): {tool_call.function.name} with args: {tool_call.function.arguments}")
                 if tool_call.function.name == "web_search":

@@ -29,7 +29,7 @@ class PromptConfig:
 
 
 class EnhancedPromptResponse(BaseModel):
-    analysis: str
+    analysis: Optional[str] = None
     improved_prompt: str
 
 def get_client():
