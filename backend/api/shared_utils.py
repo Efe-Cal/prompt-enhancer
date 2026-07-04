@@ -151,7 +151,7 @@ def parse_llm_response_markdown(response: str) -> str | None:
 
 def check_hcai_status() -> bool:
     res = httpx.get("https://ai.hackclub.com/up").json()
-    return res.get("status", "down") == "up"
+    return float(res.get("balanceRemaining", "0.0")) > 1
 
 def get_tools(use_web_search: bool):
     tools = [
