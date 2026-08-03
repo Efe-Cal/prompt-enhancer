@@ -1,6 +1,6 @@
 # PromptEnhance
 
-<img width="1408" height="768" alt="prompt-enhance-image" src="https://github.com/user-attachments/assets/05bd4a05-d5b7-4cfd-94e9-481625bcec0b" />
+<!-- <img width="1408" height="768" alt="prompt-enhance-image" src="https://github.com/user-attachments/assets/05bd4a05-d5b7-4cfd-94e9-481625bcec0b" /> -->
 
 ## Overview
 
@@ -8,12 +8,12 @@ PromptEnhance is a web application designed to help users create better AI promp
 
 ### Key Features
 
-✨ **Smart Prompt Enhancement** - AI-powered prompt improvement with best practices built-in  
-❓ **Questioning** - Interactive prompt refinement through user feedback  
-🔍 **Web Search Integration** - Optional context enrichment using real-time web data  
-✏️ **Edit Requests** - Request specific edits to the enhanced prompt  
-🎨 **Prompt Styling** - Customize the style of your prompts  
-💾 **Prompt Library** - Save your enhanced prompts on your device  
+**Smart Prompt Enhancement** - AI-powered prompt improvement with best practices built-in  
+**Questioning** - Interactive prompt refinement through user feedback  
+**Web Search Integration** - Optional context enrichment using real-time web data  
+**Edit Requests** - Request specific edits to the enhanced prompt  
+**Prompt Styling** - Customize the style of your prompts  
+**Prompt Library** - Save your enhanced prompts on your device  
 
 
 ---
